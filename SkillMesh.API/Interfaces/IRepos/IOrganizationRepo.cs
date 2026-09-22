@@ -1,6 +1,6 @@
-﻿using SkillMesh.API.Models.Organizations;
+﻿using SkillMesh.API.Models;
 
-namespace SkillMesh.API.Interfaces.IRepos.Organizations
+namespace SkillMesh.API.Interfaces.IRepos
 {
     public interface IOrganizationRepo
     {

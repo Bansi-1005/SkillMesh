@@ -1,7 +1,7 @@
 ﻿using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.Models.Organizations;
+using SkillMesh.API.Models;
 
-namespace SkillMesh.API.Interfaces.IServices.Organizations
+namespace SkillMesh.API.Interfaces.IServices
 {
     public interface IOrganizationService
     {

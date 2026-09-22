@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.Services.Organizations;
-using SkillMesh.API.Interfaces.IServices.Organizations;
+using SkillMesh.API.Services;
+using SkillMesh.API.Interfaces.IServices;
 
 namespace SkillMesh.API.Controllers
 {

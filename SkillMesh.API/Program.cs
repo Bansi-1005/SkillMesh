@@ -1,9 +1,8 @@
 using SkillMesh.API.Data;
-using SkillMesh.API.Interfaces.IRepos.Organizations;
-using SkillMesh.API.Interfaces.IServices.Organizations;
-using SkillMesh.API.Repositories.Organizations;
-using SkillMesh.API.Services.Organizations;
-
+using SkillMesh.API.Interfaces.IRepos;
+using SkillMesh.API.Interfaces.IServices;
+using SkillMesh.API.Repositories;
+using SkillMesh.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

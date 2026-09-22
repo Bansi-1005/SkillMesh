@@ -1,4 +1,4 @@
-﻿namespace SkillMesh.API.Models.Organizations
+﻿namespace SkillMesh.API.Models
 {
     public class Organization
     {

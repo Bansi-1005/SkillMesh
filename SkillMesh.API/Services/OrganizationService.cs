@@ -1,9 +1,9 @@
 ﻿using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.Models.Organizations;
-using SkillMesh.API.Interfaces.IRepos.Organizations;
-using SkillMesh.API.Interfaces.IServices.Organizations;
+using SkillMesh.API.Interfaces.IRepos;
+using SkillMesh.API.Interfaces.IServices;
+using SkillMesh.API.Models;
 
-namespace SkillMesh.API.Services.Organizations
+namespace SkillMesh.API.Services
 {
     public class OrganizationService : IOrganizationService
     {

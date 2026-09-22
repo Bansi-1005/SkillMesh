@@ -1,9 +1,9 @@
 ﻿using Dapper;
 using SkillMesh.API.Data;
-using SkillMesh.API.Interfaces.IRepos.Organizations;
-using SkillMesh.API.Models.Organizations;
+using SkillMesh.API.Interfaces.IRepos;
+using SkillMesh.API.Models;
 
-namespace SkillMesh.API.Repositories.Organizations
+namespace SkillMesh.API.Repositories
 {
     public class OrganizationRepo : IOrganizationRepo
     {
