@@ -1,4 +1,9 @@
 using SkillMesh.API.Data;
+using SkillMesh.API.Interfaces.IRepos.Organizations;
+using SkillMesh.API.Interfaces.IServices.Organizations;
+using SkillMesh.API.Repositories.Organizations;
+using SkillMesh.API.Services.Organizations;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<DbConnectionFactory>();
+
+builder.Services.AddScoped<IOrganizationRepo, OrganizationRepo>(); 
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
