@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Dapper" Version="2.1.86" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.31" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0" />
@@ -15,7 +16,6 @@
 
   <ItemGroup>
     <Folder Include="Middleware\" />
-    <Folder Include="Helpers\" />
   </ItemGroup>
 
 </Project>

@@ -1,18 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.Services;
+using SkillMesh.API.DTOs.Skills;
 using SkillMesh.API.Interfaces.IServices;
 
 namespace SkillMesh.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrganizationController : ControllerBase
+    public class SkillController : ControllerBase
     {
-        private readonly IOrganizationService _service;
+        private readonly ISkillService _service;
 
-        public OrganizationController(IOrganizationService service)
+        public SkillController(ISkillService service)
         {
             _service = service;
         }
@@ -23,15 +22,15 @@ namespace SkillMesh.API.Controllers
         {
             try
             {
-                var organizations = await _service.GetAll();
+                var skills = await _service.GetAll();
 
-                return Ok(organizations);
+                return Ok(skills);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Error while getting organizations.",
+                    Message = "Error while getting skills.",
                     Error = ex.Message
                 });
             }
@@ -43,20 +42,20 @@ namespace SkillMesh.API.Controllers
         {
             try
             {
-                var organization = await _service.GetById(id);
+                var skill = await _service.GetById(id);
 
-                if (organization == null)
+                if (skill == null)
                 {
-                    return NotFound("Organization not found.");
+                    return NotFound("Skill not found.");
                 }
 
-                return Ok(organization);
+                return Ok(skill);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Error while getting organization.",
+                    Message = "Error while getting skill.",
                     Error = ex.Message
                 });
             }
@@ -65,7 +64,7 @@ namespace SkillMesh.API.Controllers
         // CREATE
         [HttpPost]
         public async Task<IActionResult> Create(
-            OrganizationCreateDto dto)
+            SkillCreateDto dto)
         {
             try
             {
@@ -73,15 +72,15 @@ namespace SkillMesh.API.Controllers
 
                 return Ok(new
                 {
-                    Message = "Organization created successfully.",
-                    OrganizationId = id
+                    Message = "Skill created successfully.",
+                    SkillId = id
                 });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Error while creating organization.",
+                    Message = "Error while creating skill.",
                     Error = ex.Message
                 });
             }
@@ -91,7 +90,7 @@ namespace SkillMesh.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
             int id,
-            OrganizationUpdateDto dto)
+            SkillUpdateDto dto)
         {
             try
             {
@@ -99,16 +98,16 @@ namespace SkillMesh.API.Controllers
 
                 if (!result)
                 {
-                    return NotFound("Organization not found.");
+                    return NotFound("Skill not found.");
                 }
 
-                return Ok("Organization updated successfully.");
+                return Ok("Skill updated successfully.");
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Error while updating organization.",
+                    Message = "Error while updating skill.",
                     Error = ex.Message
                 });
             }
@@ -124,16 +123,16 @@ namespace SkillMesh.API.Controllers
 
                 if (!result)
                 {
-                    return NotFound("Organization not found.");
+                    return NotFound("Skill not found.");
                 }
 
-                return Ok("Organization deleted successfully.");
+                return Ok("Skill deleted successfully.");
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Error while deleting organization.",
+                    Message = "Error while deleting skill.",
                     Error = ex.Message
                 });
             }

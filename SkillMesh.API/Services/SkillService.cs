@@ -1,21 +1,21 @@
-﻿using SkillMesh.API.DTOs.Organizations;
+﻿using SkillMesh.API.DTOs.Skills;
 using SkillMesh.API.Interfaces.IRepos;
 using SkillMesh.API.Interfaces.IServices;
 using SkillMesh.API.Models;
 
 namespace SkillMesh.API.Services
 {
-    public class OrganizationService : IOrganizationService
+    public class SkillService : ISkillService
     {
-        private readonly IOrganizationRepo _repository;
+        private readonly ISkillRepo _repository;
 
-        public OrganizationService(IOrganizationRepo repository)
+        public SkillService(ISkillRepo repository)
         {
             _repository = repository;
         }
 
         // GET ALL
-        public async Task<IEnumerable<Organization>> GetAll()
+        public async Task<IEnumerable<Skill>> GetAll()
         {
             try
             {
@@ -28,7 +28,7 @@ namespace SkillMesh.API.Services
         }
 
         // GET BY ID
-        public async Task<Organization?> GetById(int id)
+        public async Task<Skill?> GetById(int id)
         {
             try
             {
@@ -41,24 +41,19 @@ namespace SkillMesh.API.Services
         }
 
         // CREATE
-        public async Task<int> Create(OrganizationCreateDto dto)
+        public async Task<int> Create(SkillCreateDto dto)
         {
             try
             {
-                Organization organization = new Organization
+                Skill skill = new Skill
                 {
-                    OrganizationName = dto.OrganizationName,
-                    OrganizationCode = dto.OrganizationCode,
-                    Email = dto.Email,
-                    Phone = dto.Phone,
-                    Address = dto.Address,
-                    City = dto.City,
-                    State = dto.State,
-                    Country = dto.Country,
+                    SkillCategoryId = dto.SkillCategoryId,
+                    SkillName = dto.SkillName,
+                    Description = dto.Description,
                     IsActive = true
                 };
 
-                return await _repository.Create(organization);
+                return await _repository.Create(skill);
             }
             catch (Exception)
             {
@@ -69,24 +64,19 @@ namespace SkillMesh.API.Services
         // UPDATE
         public async Task<bool> Update(
             int id,
-            OrganizationUpdateDto dto)
+            SkillUpdateDto dto)
         {
             try
             {
-                Organization organization = new Organization
+                Skill skill = new Skill
                 {
-                    OrganizationName = dto.OrganizationName,
-                    OrganizationCode = dto.OrganizationCode,
-                    Email = dto.Email,
-                    Phone = dto.Phone,
-                    Address = dto.Address,
-                    City = dto.City,
-                    State = dto.State,
-                    Country = dto.Country,
+                    SkillCategoryId = dto.SkillCategoryId,
+                    SkillName = dto.SkillName,
+                    Description = dto.Description,
                     IsActive = dto.IsActive
                 };
 
-                return await _repository.Update(id, organization);
+                return await _repository.Update(id, skill);
             }
             catch (Exception)
             {

@@ -17,155 +17,178 @@ namespace SkillMesh.API.Repositories
         // GET ALL
         public async Task<IEnumerable<Organization>> GetAll()
         {
-            using var connection =
-                _connectionFactory.CreateConnection();
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
 
-            string sql = @"
-                SELECT
-                    OrganizationId,
-                    OrganizationName,
-                    OrganizationCode,
-                    Email,
-                    Phone,
-                    Address,
-                    City,
-                    State,
-                    Country,
-                    IsActive,
-                    CreatedAt
-                FROM Organizations
-                ORDER BY OrganizationId DESC";
+                string sql = @"
+                    SELECT
+                        OrganizationId,
+                        OrganizationName,
+                        OrganizationCode,
+                        Email,
+                        Phone,
+                        Address,
+                        City,
+                        State,
+                        Country,
+                        IsActive,
+                        CreatedAt
+                    FROM Organizations
+                    ORDER BY OrganizationId DESC";
 
-            return await connection.QueryAsync<Organization>(sql);
+                return await connection.QueryAsync<Organization>(sql);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         // GET BY ID
         public async Task<Organization?> GetById(int id)
         {
-            using var connection =
-                _connectionFactory.CreateConnection();
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
 
-            string sql = @"
-                SELECT
-                    OrganizationId,
-                    OrganizationName,
-                    OrganizationCode,
-                    Email,
-                    Phone,
-                    Address,
-                    City,
-                    State,
-                    Country,
-                    IsActive,
-                    CreatedAt
-                FROM Organizations
-                WHERE OrganizationId = @Id";
+                string sql = @"
+                    SELECT
+                        OrganizationId,
+                        OrganizationName,
+                        OrganizationCode,
+                        Email,
+                        Phone,
+                        Address,
+                        City,
+                        State,
+                        Country,
+                        IsActive,
+                        CreatedAt
+                    FROM Organizations
+                    WHERE OrganizationId = @Id";
 
-            return await connection.QueryFirstOrDefaultAsync<Organization>(
-                sql,
-                new { Id = id }
-            );
+                return await connection.QueryFirstOrDefaultAsync<Organization>(
+                    sql,
+                    new { Id = id });
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
-
 
         // CREATE
         public async Task<int> Create(Organization organization)
         {
-            using var connection =
-                _connectionFactory.CreateConnection();
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
 
-            string sql = @"
-                INSERT INTO Organizations
-                (
-                    OrganizationName,
-                    OrganizationCode,
-                    Email,
-                    Phone,
-                    Address,
-                    City,
-                    State,
-                    Country
-                )
-                VALUES
-                (
-                    @OrganizationName,
-                    @OrganizationCode,
-                    @Email,
-                    @Phone,
-                    @Address,
-                    @City,
-                    @State,
-                    @Country
-                );
+                string sql = @"
+                    INSERT INTO Organizations
+                    (
+                        OrganizationName,
+                        OrganizationCode,
+                        Email,
+                        Phone,
+                        Address,
+                        City,
+                        State,
+                        Country
+                    )
+                    VALUES
+                    (
+                        @OrganizationName,
+                        @OrganizationCode,
+                        @Email,
+                        @Phone,
+                        @Address,
+                        @City,
+                        @State,
+                        @Country
+                    );
 
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-            return await connection.ExecuteScalarAsync<int>(
-                sql,
-                organization
-            );
+                return await connection.ExecuteScalarAsync<int>(
+                    sql,
+                    organization);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
-
 
         // UPDATE
         public async Task<bool> Update(
             int id,
             Organization organization)
         {
-            using var connection =
-                _connectionFactory.CreateConnection();
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
 
-            string sql = @"
-                UPDATE Organizations
-                SET
-                    OrganizationName = @OrganizationName,
-                    OrganizationCode = @OrganizationCode,
-                    Email = @Email,
-                    Phone = @Phone,
-                    Address = @Address,
-                    City = @City,
-                    State = @State,
-                    Country = @Country,
-                    IsActive = @IsActive
-                WHERE OrganizationId = @Id";
+                string sql = @"
+                    UPDATE Organizations
+                    SET
+                        OrganizationName = @OrganizationName,
+                        OrganizationCode = @OrganizationCode,
+                        Email = @Email,
+                        Phone = @Phone,
+                        Address = @Address,
+                        City = @City,
+                        State = @State,
+                        Country = @Country,
+                        IsActive = @IsActive
+                    WHERE OrganizationId = @Id";
 
-            int rows = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    Id = id,
-                    organization.OrganizationName,
-                    organization.OrganizationCode,
-                    organization.Email,
-                    organization.Phone,
-                    organization.Address,
-                    organization.City,
-                    organization.State,
-                    organization.Country,
-                    organization.IsActive
-                }
-            );
+                int rows = await connection.ExecuteAsync(
+                    sql,
+                    new
+                    {
+                        Id = id,
+                        organization.OrganizationName,
+                        organization.OrganizationCode,
+                        organization.Email,
+                        organization.Phone,
+                        organization.Address,
+                        organization.City,
+                        organization.State,
+                        organization.Country,
+                        organization.IsActive
+                    });
 
-            return rows > 0;
+                return rows > 0;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
-
 
         // DELETE
         public async Task<bool> Delete(int id)
         {
-            using var connection =
-                _connectionFactory.CreateConnection();
+            try
+            {
+                using var connection = _connectionFactory.CreateConnection();
 
-            string sql = @"
-                DELETE FROM Organizations
-                WHERE OrganizationId = @Id";
+                string sql = @"
+                    DELETE FROM Organizations
+                    WHERE OrganizationId = @Id";
 
-            int rows = await connection.ExecuteAsync(
-                sql,
-                new { Id = id }
-            );
+                int rows = await connection.ExecuteAsync(
+                    sql,
+                    new { Id = id });
 
-            return rows > 0;
+                return rows > 0;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }
