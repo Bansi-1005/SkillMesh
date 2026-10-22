@@ -138,10 +138,11 @@ namespace SkillMesh.API.Services
             // 1. Validate OrganizationId
             // ---------------------------------------------
 
-            if (!dto.OrganizationId.HasValue)
+            if (!dto.OrganizationId.HasValue ||
+      dto.OrganizationId.Value <= 0)
             {
-                throw new Exception(
-                    "OrganizationId is required for Admin registration."
+                throw new ArgumentException(
+                    "A valid Organization ID is required for Admin registration."
                 );
             }
 
@@ -157,8 +158,8 @@ namespace SkillMesh.API.Services
 
             if (!organizationExists)
             {
-                throw new Exception(
-                    "Organization does not exist or is inactive."
+                throw new ArgumentException(
+                    $"Organization ID {dto.OrganizationId.Value} does not exist or is inactive."
                 );
             }
 
@@ -279,10 +280,16 @@ namespace SkillMesh.API.Services
                     organizationId
                 );
 
+            if (organizationId <= 0)
+            {
+                throw new ArgumentException(
+                    "A valid Organization ID is required for Learner registration."
+                );
+            }
             if (!organizationExists)
             {
-                throw new Exception(
-                    "Organization does not exist or is inactive."
+                throw new ArgumentException(
+                    $"Organization ID {organizationId} does not exist or is inactive."
                 );
             }
 

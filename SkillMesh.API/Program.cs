@@ -82,6 +82,12 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IAuthRepo, AuthRepo>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+
+
+builder.Services.AddScoped<IUserManagementRepo, UserManagementRepo>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+
+
 builder.Services.AddScoped<JwtHelper>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
