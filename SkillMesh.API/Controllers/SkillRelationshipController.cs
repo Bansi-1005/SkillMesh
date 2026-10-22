@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SkillMesh.API.DTOs.SkillRelationships;
 using SkillMesh.API.Interfaces.IServices;
@@ -7,6 +8,7 @@ namespace SkillMesh.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SkillRelationshipController : ControllerBase
     {
         private readonly ISkillRelationshipService _skillRelationshipService;
@@ -17,6 +19,7 @@ namespace SkillMesh.API.Controllers
             _skillRelationshipService = skillRelationshipService;
         }
 
+        [Authorize(Roles = "Super Admin,Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -35,6 +38,7 @@ namespace SkillMesh.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Super Admin")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -58,6 +62,7 @@ namespace SkillMesh.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Super Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(
             SkillRelationshipCreateDto dto)
@@ -81,6 +86,7 @@ namespace SkillMesh.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Super Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
             int id,
@@ -109,6 +115,7 @@ namespace SkillMesh.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Super Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
