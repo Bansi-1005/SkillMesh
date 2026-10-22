@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SkillMesh.API.DTOs.Skills;
 using SkillMesh.API.Interfaces.IServices;
 
 namespace SkillMesh.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class SkillController : ControllerBase
@@ -62,6 +64,7 @@ namespace SkillMesh.API.Controllers
         }
 
         // CREATE
+        [Authorize(Roles = "Super Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(
             SkillCreateDto dto)
@@ -87,6 +90,7 @@ namespace SkillMesh.API.Controllers
         }
 
         // UPDATE
+        [Authorize(Roles = "Super Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
             int id,
@@ -114,6 +118,7 @@ namespace SkillMesh.API.Controllers
         }
 
         // DELETE
+        [Authorize(Roles = "Super Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

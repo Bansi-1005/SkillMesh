@@ -38,7 +38,15 @@ const initialStats = [
 ];
 
 async function fetchApi(endpoint) {
-  const response = await fetch(`${API_BASE_URL}/api/${endpoint}`);
+  const token = localStorage.getItem("skillmesh_token");
+
+  const response = await fetch(`${API_BASE_URL}/api/${endpoint}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`${endpoint} API failed with status ${response.status}`);
