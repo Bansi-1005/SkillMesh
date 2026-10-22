@@ -1,3 +1,4 @@
+
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Network,
@@ -61,8 +62,7 @@ const menus = {
 
   "Super Admin": [
     ["Dashboard", "/superadmin", LayoutDashboard],
-    ["Organizations", "/superadmin/organizations", Building2],
-    ["Admin Management", "/superadmin/admins", UserCog],
+    ["Organizations Management", "/superadmin/organizations", Building2],
     ["User Management", "/superadmin/users", Users],
     ["Roles & Access", "/superadmin/roles", ShieldCheck],
     ["Skill Categories", "/superadmin/skill-categories", Tags],
@@ -75,29 +75,16 @@ const menus = {
   ],
 };
 
-// export default function Sidebar({ role = "Learner" }) {
-//   const navigate = useNavigate();
-//   const items = menus[role] || menus.Learner;
-
-//   const dashboardPaths = {
-//     Learner: "/learner",
-//     Admin: "/admin",
-//     "Super Admin": "/superadmin",
-//   };
-
-//   const dashboardPath = dashboardPaths[role] || "/learner";
 export default function Sidebar({ role = "Learner" }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Select the correct sidebar using the current URL.
-  const pathname = location.pathname.toLowerCase();
-
-  // Normalize the role received from DashboardLayout.
   const normalizedRole = String(role)
     .trim()
     .toLowerCase()
     .replace(/[\s_-]/g, "");
+
+  const pathname = location.pathname.toLowerCase();
 
   const roleKey = pathname.startsWith("/superadmin")
     ? "Super Admin"
@@ -123,7 +110,6 @@ export default function Sidebar({ role = "Learner" }) {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-[#111D3A] text-white">
-      {/* Logo */}
       <div className="flex h-20 shrink-0 items-center gap-3 border-b border-white/10 px-6">
         <div className="rounded-xl bg-[#5540F5] p-2.5">
           <Network size={24} />
@@ -131,12 +117,10 @@ export default function Sidebar({ role = "Learner" }) {
         <span className="text-xl font-bold">SkillMesh</span>
       </div>
 
-      {/* Role workspace */}
       <p className="px-6 pb-3 pt-8 text-[10px] font-bold uppercase tracking-[2px] text-slate-400">
         {roleKey} Workspace
       </p>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto scrollbar-hide px-3 pb-4">
         {items.map(([label, path, Icon]) => (
           <NavLink
@@ -157,16 +141,15 @@ export default function Sidebar({ role = "Learner" }) {
         ))}
       </nav>
 
-      {/* Help section */}
-      {/* <div className="m-3 shrink-0 rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="m-3 shrink-0 rounded-xl border border-white/10 bg-white/5 p-4">
         <p className="text-sm font-semibold">Need help?</p>
         <p className="mt-2 text-xs leading-5 text-slate-400">
           Welcome to the SkillMesh learning workspace.
         </p>
-      </div> */}
+      </div>
 
-      {/* Logout / Login navigation */}
       <button
+        type="button"
         onClick={() => navigate("/login")}
         className="flex shrink-0 items-center gap-3 border-t border-white/10 px-6 py-4 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
       >
