@@ -24,7 +24,7 @@ namespace SkillMesh.API.Controllers
 
                 connection.Open();
 
-                return Ok("Database connected successfully.");
+                return Ok("Database connected successfully...");
             }
             catch (Exception ex)
             {
