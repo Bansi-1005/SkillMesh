@@ -87,6 +87,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementRepo, UserManagementRepo>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 
+builder.Services.AddScoped<ISuperAdminDashboardRepo, SuperAdminDashboardRepo>();
+builder.Services.AddScoped<ISuperAdminDashboardService, SuperAdminDashboardService>();
+
 
 builder.Services.AddScoped<JwtHelper>();
 

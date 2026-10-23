@@ -3,7 +3,6 @@ using SkillMesh.API.DTOs.Organizations;
 using SkillMesh.API.DTOs.UserManagement;
 using SkillMesh.API.Interfaces.IRepos;
 using SkillMesh.API.Interfaces.IServices;
-using SkillMesh.API.Repositories;
 
 namespace SkillMesh.API.Services
 {
@@ -22,14 +21,16 @@ namespace SkillMesh.API.Services
             return _repository.GetUsersAsync();
         }
 
-        public Task<List<OrganizationListDto>> GetOrganizationsAsync()
+        public Task<List<OrganizationListDto>>
+            GetOrganizationsAsync()
         {
             return _repository.GetOrganizationsAsync();
         }
 
+        // Super Admin: global account activation
         public async Task<bool> SetUserStatusAsync(
-          int userId,
-          bool isActive)
+            int userId,
+            bool isActive)
         {
             if (userId <= 0)
             {
@@ -40,6 +41,45 @@ namespace SkillMesh.API.Services
             return await _repository.SetUserStatusAsync(
                 userId,
                 isActive);
+        }
+
+        // Admin: list learners in their organization
+        public async Task<IEnumerable<LearnerManagementDto>>
+            GetOrganizationLearnersAsync(
+                int organizationId)
+        {
+            if (organizationId <= 0)
+            {
+                throw new ArgumentException(
+                    "A valid organization ID is required.");
+            }
+
+            return await _repository.GetOrganizationLearnersAsync(
+                organizationId);
+        }
+
+        // Admin: change only the organization-specific status
+        public async Task<bool> SetOrganizationLearnerStatusAsync(
+            int userId,
+            int organizationId,
+            bool adminIsActive)
+        {
+            if (userId <= 0)
+            {
+                throw new ArgumentException(
+                    "A valid learner ID is required.");
+            }
+
+            if (organizationId <= 0)
+            {
+                throw new ArgumentException(
+                    "A valid organization ID is required.");
+            }
+
+            return await _repository.SetOrganizationLearnerStatusAsync(
+                userId,
+                organizationId,
+                adminIsActive);
         }
     }
 }
