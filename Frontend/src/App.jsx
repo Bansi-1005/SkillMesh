@@ -1,6 +1,6 @@
 
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-
+import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
@@ -15,7 +15,7 @@ import Skill from "./pages/superadmin/Skill";
 import SkillLevel from "./pages/superadmin/SkillLevel";
 import SkillRelationship from "./pages/superadmin/SkillRelationship";
 import UserManagement from "./pages/superadmin/UserManagement";
-
+import LearnerManagement from "./pages/admin/LearnerManagement";
 export default function App() {
   return (
     <BrowserRouter>
@@ -45,6 +45,14 @@ export default function App() {
           element={<SkillRelationship role="Admin" />}
         />
 
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <LearnerManagement />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/superadmin" element={<SuperAdminDashboard />} />
 
         <Route
