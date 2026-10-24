@@ -1,4 +1,3 @@
-
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Network,
@@ -44,7 +43,6 @@ const menus = {
 
   Admin: [
     ["Dashboard", "/admin", LayoutDashboard],
-    ["Organization", "/admin/organization", Building2],
     ["Learner Management", "/admin/users", Users],
     ["Learner Profiles", "/admin/learner-profiles", UserRound],
     ["Skills", "/admin/skills", Brain],
@@ -62,7 +60,6 @@ const menus = {
 
   "Super Admin": [
     ["Dashboard", "/superadmin", LayoutDashboard],
-    ["Organizations Management", "/superadmin/organizations", Building2],
     ["User Management", "/superadmin/users", Users],
     ["Roles & Access", "/superadmin/roles", ShieldCheck],
     ["Skill Categories", "/superadmin/skill-categories", Tags],
@@ -70,7 +67,7 @@ const menus = {
     ["Skill Levels", "/superadmin/skill-levels", GraduationCap],
     ["Skill Relationships", "/superadmin/skill-relationships", GitBranch],
     ["Job Role Management", "/superadmin/job-roles", BriefcaseBusiness],
-    ["Job Role Skills", "/superadmin/job-role-skills", Target],
+    // ["Job Role Skills", "/superadmin/job-role-skills", Target],
     ["Analytics & Reports", "/superadmin/analytics", ChartNoAxesCombined],
   ],
 };
