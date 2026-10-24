@@ -1,6 +1,4 @@
-﻿
-using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.DTOs.UserManagement;
+﻿using SkillMesh.API.DTOs.UserManagement;
 
 namespace SkillMesh.API.Interfaces.IServices
 {
@@ -8,22 +6,13 @@ namespace SkillMesh.API.Interfaces.IServices
     {
         Task<List<UserListDto>> GetUsersAsync();
 
-        Task<List<OrganizationListDto>> GetOrganizationsAsync();
-
-        // Super Admin: global account status
         Task<bool> SetUserStatusAsync(
             int userId,
             bool isActive);
 
-        // Admin: learners belonging to their organization
-        Task<IEnumerable<LearnerManagementDto>>
-            GetOrganizationLearnersAsync(
-                int organizationId);
-
-        // Admin: organization-specific learner status
-        Task<bool> SetOrganizationLearnerStatusAsync(
+        Task<bool> SetLearnerStatusAsync(
             int userId,
-            int organizationId,
-            bool adminIsActive);
+            bool isActive,
+            bool isSuperAdmin);
     }
 }

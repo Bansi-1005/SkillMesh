@@ -1,6 +1,4 @@
-﻿
-using Microsoft.Data.SqlClient;
-using SkillMesh.API.DTOs.Organizations;
+﻿using Microsoft.Data.SqlClient;
 using SkillMesh.API.DTOs.UserManagement;
 using SkillMesh.API.Interfaces.IRepos;
 using System.Data;
@@ -31,17 +29,14 @@ namespace SkillMesh.API.Repositories
                     u.LastName,
                     u.Email,
                     u.Phone,
-                    u.OrganizationId,
-                    o.OrganizationName,
                     r.RoleId,
                     r.RoleName,
                     u.IsActive,
-                    u.CreatedAt
+                    u.CreatedAt,
+                    u.DeactivatedBySuperAdmin
                 FROM dbo.Users AS u
                 INNER JOIN dbo.Roles AS r
                     ON u.RoleId = r.RoleId
-                LEFT JOIN dbo.Organizations AS o
-                    ON u.OrganizationId = o.OrganizationId
                 ORDER BY u.UserId DESC;";
 
             try
@@ -62,41 +57,26 @@ namespace SkillMesh.API.Repositories
                     users.Add(new UserListDto
                     {
                         UserId = Convert.ToInt32(reader["UserId"]),
-
-                        FirstName =
-                            reader["FirstName"]?.ToString() ?? string.Empty,
-
-                        LastName =
-                            reader["LastName"]?.ToString() ?? string.Empty,
-
-                        Email =
-                            reader["Email"]?.ToString() ?? string.Empty,
-
+                        FirstName = reader["FirstName"]?.ToString()
+                            ?? string.Empty,
+                        LastName = reader["LastName"]?.ToString()
+                            ?? string.Empty,
+                        Email = reader["Email"]?.ToString()
+                            ?? string.Empty,
                         Phone = reader["Phone"] == DBNull.Value
                             ? null
                             : reader["Phone"].ToString(),
-
-                        OrganizationId =
-                            reader["OrganizationId"] == DBNull.Value
-                                ? null
-                                : Convert.ToInt32(
-                                    reader["OrganizationId"]),
-
-                        OrganizationName =
-                            reader["OrganizationName"] == DBNull.Value
-                                ? null
-                                : reader["OrganizationName"].ToString(),
-
                         RoleId = Convert.ToInt32(reader["RoleId"]),
-
-                        RoleName =
-                            reader["RoleName"]?.ToString() ?? string.Empty,
-
+                        RoleName = reader["RoleName"]?.ToString()
+                            ?? string.Empty,
                         IsActive = Convert.ToBoolean(reader["IsActive"]),
-
                         CreatedAt = reader["CreatedAt"] == DBNull.Value
                             ? DateTime.MinValue
-                            : Convert.ToDateTime(reader["CreatedAt"])
+                            : Convert.ToDateTime(reader["CreatedAt"]),
+                        DeactivatedBySuperAdmin =
+                            reader["DeactivatedBySuperAdmin"] != DBNull.Value
+                            && Convert.ToBoolean(
+                                reader["DeactivatedBySuperAdmin"])
                     });
                 }
 
@@ -109,65 +89,21 @@ namespace SkillMesh.API.Repositories
             }
         }
 
-        // GET: api/UserManagement/organizations
-        public async Task<List<OrganizationListDto>>
-            GetOrganizationsAsync()
-        {
-            var organizations = new List<OrganizationListDto>();
-
-            const string sql = @"
-                SELECT
-                    OrganizationId,
-                    OrganizationName
-                FROM dbo.Organizations
-                WHERE IsActive = 1
-                ORDER BY OrganizationName;";
-
-            try
-            {
-                await using var connection =
-                    new SqlConnection(_connectionString);
-
-                await using var command =
-                    new SqlCommand(sql, connection);
-
-                await connection.OpenAsync();
-
-                await using var reader =
-                    await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    organizations.Add(new OrganizationListDto
-                    {
-                        OrganizationId =
-                            Convert.ToInt32(reader["OrganizationId"]),
-
-                        OrganizationName =
-                            reader["OrganizationName"]?.ToString()
-                            ?? string.Empty
-                    });
-                }
-
-                return organizations;
-            }
-            catch (SqlException ex)
-            {
-                throw new InvalidOperationException(
-                    "Database error while loading organizations.", ex);
-            }
-        }
-
-        // PUT: api/UserManagement/users/{userId}/status
-        // Super Admin can activate/deactivate Admin and Learner accounts.
-        // RoleId 1 is assumed to be Super Admin.
+        // General user status endpoint: Super Admin only.
+        // RoleId 1 = Super Admin, 2 = Admin, 3 = Learner.
         public async Task<bool> SetUserStatusAsync(
             int userId,
             bool isActive)
         {
             const string sql = @"
                 UPDATE dbo.Users
-                SET IsActive = @IsActive
+                SET
+                    IsActive = @IsActive,
+                    DeactivatedBySuperAdmin =
+                        CASE
+                            WHEN RoleId = 3 AND @IsActive = 0 THEN 1
+                            ELSE 0
+                        END
                 WHERE UserId = @UserId
                   AND RoleId IN (2, 3);";
 
@@ -179,11 +115,11 @@ namespace SkillMesh.API.Repositories
                 await using var command =
                     new SqlCommand(sql, connection);
 
-                command.Parameters.Add(
-                    "@UserId", SqlDbType.Int).Value = userId;
+                command.Parameters.Add("@UserId", SqlDbType.Int).Value =
+                    userId;
 
-                command.Parameters.Add(
-                    "@IsActive", SqlDbType.Bit).Value = isActive;
+                command.Parameters.Add("@IsActive", SqlDbType.Bit).Value =
+                    isActive;
 
                 await connection.OpenAsync();
 
@@ -196,128 +132,51 @@ namespace SkillMesh.API.Repositories
             }
         }
 
-        // GET: api/UserManagement/organization-learners
-        // Lists learners belonging to the specified organization.
-        // Uses existing tables only; does not reference
-        // the missing dbo.OrganizationLearners table.
-        public async Task<IEnumerable<LearnerManagementDto>>
-            GetOrganizationLearnersAsync(int organizationId)
-        {
-            var learners = new List<LearnerManagementDto>();
+        // Learner-only status endpoint.
+        // Super Admin can activate/deactivate.
+        // Admin can deactivate an active learner, but cannot reactivate.
 
-            const string sql = @"           
-                                SELECT
-                                    u.UserId,
-                                    u.FirstName,
-                                    u.LastName,
-                                    u.Email,
-                                    u.OrganizationId,
-                                    o.OrganizationName,
-                                    u.IsActive,
-                                    o.IsActive AS OrganizationIsActive,
-                                    u.CreatedAt
-                                FROM dbo.Users AS u
-                                INNER JOIN dbo.Roles AS r
-                                    ON u.RoleId = r.RoleId
-                                INNER JOIN dbo.Organizations AS o
-                                    ON u.OrganizationId = o.OrganizationId
-                                WHERE u.OrganizationId = @OrganizationId
-                                    AND r.RoleName = 'Learner'
-                                ORDER BY u.UserId DESC;
-                                ;";
-
-            try
-            {
-                await using var connection =
-                    new SqlConnection(_connectionString);
-
-                await using var command =
-                    new SqlCommand(sql, connection);
-
-                command.Parameters.Add(
-                    "@OrganizationId", SqlDbType.Int).Value =
-                    organizationId;
-
-                await connection.OpenAsync();
-
-                await using var reader =
-                    await command.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    bool accountIsActive =
-                        Convert.ToBoolean(reader["IsActive"]);
-
-                    learners.Add(new LearnerManagementDto
-                    {
-                        UserId =
-                            Convert.ToInt32(reader["UserId"]),
-
-                        FirstName =
-                            reader["FirstName"]?.ToString() ?? string.Empty,
-
-                        LastName =
-                            reader["LastName"]?.ToString() ?? string.Empty,
-
-                        Email =
-                            reader["Email"]?.ToString() ?? string.Empty,
-
-                        OrganizationId =
-                            reader["OrganizationId"] == DBNull.Value
-                                ? null
-                                : Convert.ToInt32(
-                                    reader["OrganizationId"]),
-
-                        OrganizationName =
-                            reader["OrganizationName"] == DBNull.Value
-                                ? null
-                                : reader["OrganizationName"].ToString(),
-
-                        // This workaround uses the global account status.
-                        IsActive = accountIsActive,
-                        AdminIsActive = accountIsActive,
-
-                        OrganizationIsActive =
-                            Convert.ToBoolean(
-                                reader["OrganizationIsActive"]),
-                        CreatedAt =
-                            Convert.ToDateTime(reader["CreatedAt"])
-                    });
-                }
-
-                return learners;
-            }
-            catch (SqlException ex)
-            {
-                throw new InvalidOperationException(
-                    "Database error while loading organization learners.",
-                    ex);
-            }
-        }
-
-        // PUT: api/UserManagement/organization-learners/{userId}/status
-        //
-        // IMPORTANT:
-        // This updates dbo.Users.IsActive because the separate
-        // dbo.OrganizationLearners table does not exist.
-        // It therefore changes the global account status.
-        public async Task<bool> SetOrganizationLearnerStatusAsync(
+        public async Task<bool> SetLearnerStatusAsync(
             int userId,
-            int organizationId,
-            bool adminIsActive)
+            bool isActive,
+            bool isSuperAdmin)
         {
             const string sql = @"
-                UPDATE u
-                SET u.IsActive = @IsActive
-                FROM dbo.Users AS u
-                INNER JOIN dbo.Roles AS r
-                    ON r.RoleId = u.RoleId
-                INNER JOIN dbo.Organizations AS o
-                    ON o.OrganizationId = u.OrganizationId
-                WHERE u.UserId = @UserId
-                  AND u.OrganizationId = @OrganizationId
-                  AND r.RoleName = 'Learner'
-                  AND o.IsActive = 1;";
+        UPDATE dbo.Users
+        SET
+            IsActive = @IsActive,
+            DeactivatedBySuperAdmin =
+                CASE
+                    WHEN @IsActive = 0 AND @IsSuperAdmin = 1 THEN 1
+                    ELSE 0
+                END
+        WHERE UserId = @UserId
+          AND RoleId = 3
+          AND
+          (
+              -- Super Admin can activate or deactivate any learner.
+              @IsSuperAdmin = 1
+
+              OR
+
+              -- Admin can deactivate an active learner.
+              (
+                  @IsSuperAdmin = 0
+                  AND @IsActive = 0
+                  AND IsActive = 1
+              )
+
+              OR
+
+              -- Admin can reactivate an inactive learner only
+              -- if Super Admin did not deactivate that learner.
+              (
+                  @IsSuperAdmin = 0
+                  AND @IsActive = 1
+                  AND IsActive = 0
+                  AND DeactivatedBySuperAdmin = 0
+              )
+          );";
 
             try
             {
@@ -327,26 +186,27 @@ namespace SkillMesh.API.Repositories
                 await using var command =
                     new SqlCommand(sql, connection);
 
-                command.Parameters.Add(
-                    "@UserId", SqlDbType.Int).Value = userId;
+                command.Parameters.Add("@UserId", SqlDbType.Int).Value =
+                    userId;
 
-                command.Parameters.Add(
-                    "@OrganizationId", SqlDbType.Int).Value =
-                    organizationId;
+                command.Parameters.Add("@IsActive", SqlDbType.Bit).Value =
+                    isActive;
 
-                command.Parameters.Add(
-                    "@IsActive", SqlDbType.Bit).Value = adminIsActive;
+                command.Parameters.Add("@IsSuperAdmin", SqlDbType.Bit).Value =
+                    isSuperAdmin;
 
                 await connection.OpenAsync();
 
-                return await command.ExecuteNonQueryAsync() > 0;
+                int affectedRows = await command.ExecuteNonQueryAsync();
+
+                return affectedRows > 0;
             }
             catch (SqlException ex)
             {
                 throw new InvalidOperationException(
-                    "Database error while updating the learner status.",
-                    ex);
+                    "Database error while updating learner status.", ex);
             }
         }
+
     }
 }

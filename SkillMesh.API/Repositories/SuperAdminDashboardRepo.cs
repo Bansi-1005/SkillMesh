@@ -27,23 +27,13 @@ namespace SkillMesh.API.Repositories
 
             connection.Open();
 
-            // Total and active organizations
-            dashboard.TotalOrganizations = GetCount(
-                connection,
-                "SELECT COUNT(*) FROM Organizations"
-            );
-
-            dashboard.ActiveOrganizations = GetCount(
-                connection,
-                "SELECT COUNT(*) FROM Organizations WHERE IsActive = 1"
-            );
-
-            // Total and active users across the platform
+            // Total users
             dashboard.TotalUsers = GetCount(
                 connection,
                 "SELECT COUNT(*) FROM Users"
             );
 
+            // Active users
             dashboard.ActiveUsers = GetCount(
                 connection,
                 "SELECT COUNT(*) FROM Users WHERE IsActive = 1"
@@ -82,42 +72,32 @@ namespace SkillMesh.API.Repositories
                 "SELECT COUNT(*) FROM Skills"
             );
 
-            // Total and published courses
+            // Total courses
             dashboard.TotalCourses = GetCount(
                 connection,
                 "SELECT COUNT(*) FROM Courses"
             );
 
+            // Published courses
             dashboard.PublishedCourses = GetCount(
                 connection,
                 "SELECT COUNT(*) FROM Courses WHERE IsPublished = 1"
             );
 
             // Calculate percentages safely
-            dashboard.ActiveOrganizationsPercentage =
-                GetPercentage(
-                    dashboard.ActiveOrganizations,
-                    dashboard.TotalOrganizations
-                );
+            dashboard.ActiveUsersPercentage = GetPercentage(
+                dashboard.ActiveUsers,
+                dashboard.TotalUsers
+            );
 
-            dashboard.ActiveUsersPercentage =
-                GetPercentage(
-                    dashboard.ActiveUsers,
-                    dashboard.TotalUsers
-                );
+            dashboard.PublishedCoursesPercentage = GetPercentage(
+                dashboard.PublishedCourses,
+                dashboard.TotalCourses
+            );
 
-            dashboard.PublishedCoursesPercentage =
-                GetPercentage(
-                    dashboard.PublishedCourses,
-                    dashboard.TotalCourses
-                );
-
-            // Return ALL organizations with their actual user counts
-            dashboard.RecentOrganizations =
-                GetOrganizations(connection);
-
+            // Monthly user registration chart
             dashboard.MonthlyUserRegistrations =
-    GetMonthlyUserRegistrations(connection);
+                GetMonthlyUserRegistrations(connection);
 
             return dashboard;
         }
@@ -153,91 +133,43 @@ namespace SkillMesh.API.Repositories
             );
         }
 
-        private static List<DashboardOrganizationDto> GetOrganizations(
-            IDbConnection connection)
-        {
-            var organizations = new List<DashboardOrganizationDto>();
-
-            using IDbCommand command = connection.CreateCommand();
-
-            command.CommandText = @"
-                SELECT TOP 7
-                o.OrganizationId,
-                o.OrganizationName,
-                o.OrganizationCode,
-                COUNT(u.UserId) AS UserCount,
-                o.IsActive
-            FROM Organizations AS o
-                LEFT JOIN Users AS u
-                    ON u.OrganizationId = o.OrganizationId
-                GROUP BY
-                    o.OrganizationId,
-                    o.OrganizationName,
-                    o.OrganizationCode,
-                    o.IsActive
-                ORDER BY
-                    COUNT(u.UserId) DESC,
-                    o.OrganizationId ASC";
-
-            using IDataReader reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                organizations.Add(new DashboardOrganizationDto
-                {
-                    Name = Convert.ToString(
-                        reader["OrganizationName"]
-                    ) ?? string.Empty,
-
-                    Code = Convert.ToString(
-                        reader["OrganizationCode"]
-                    ) ?? string.Empty,
-
-                    Users = Convert.ToInt32(
-                        reader["UserCount"]
-                    ),
-
-                    Status = Convert.ToBoolean(
-                        reader["IsActive"]
-                    )
-                        ? "Active"
-                        : "Inactive"
-                });
-            }
-
-            return organizations;
-        }
-
-
-
         private static List<MonthlyUserRegistrationDto>
-    GetMonthlyUserRegistrations(IDbConnection connection)
+            GetMonthlyUserRegistrations(IDbConnection connection)
         {
-            var registrations = new List<MonthlyUserRegistrationDto>();
+            var registrations =
+                new List<MonthlyUserRegistrationDto>();
 
             using IDbCommand command = connection.CreateCommand();
 
             command.CommandText = @"
-        WITH Months AS
-        (
-            SELECT
-                DATEADD(
-                    MONTH,
-                    -v.MonthOffset,
-                    DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
-                ) AS MonthStart
-            FROM (VALUES (5), (4), (3), (2), (1), (0))
-                AS v(MonthOffset)
-        )
-        SELECT
-            m.MonthStart,
-            COUNT(u.UserId) AS UserCount
-        FROM Months AS m
-        LEFT JOIN Users AS u
-            ON u.CreatedAt >= m.MonthStart
-            AND u.CreatedAt < DATEADD(MONTH, 1, m.MonthStart)
-        GROUP BY m.MonthStart
-        ORDER BY m.MonthStart;";
+                WITH Months AS
+                (
+                    SELECT
+                        DATEADD(
+                            MONTH,
+                            -v.MonthOffset,
+                            DATEFROMPARTS(
+                                YEAR(GETDATE()),
+                                MONTH(GETDATE()),
+                                1
+                            )
+                        ) AS MonthStart
+                    FROM (VALUES (5), (4), (3), (2), (1), (0))
+                        AS v(MonthOffset)
+                )
+                SELECT
+                    m.MonthStart,
+                    COUNT(u.UserId) AS UserCount
+                FROM Months AS m
+                LEFT JOIN Users AS u
+                    ON u.CreatedAt >= m.MonthStart
+                    AND u.CreatedAt < DATEADD(
+                        MONTH,
+                        1,
+                        m.MonthStart
+                    )
+                GROUP BY m.MonthStart
+                ORDER BY m.MonthStart;";
 
             using IDataReader reader = command.ExecuteReader();
 
@@ -246,11 +178,13 @@ namespace SkillMesh.API.Repositories
                 DateTime monthStart =
                     Convert.ToDateTime(reader["MonthStart"]);
 
-                registrations.Add(new MonthlyUserRegistrationDto
-                {
-                    Month = monthStart.ToString("MMM"),
-                    Users = Convert.ToInt32(reader["UserCount"])
-                });
+                registrations.Add(
+                    new MonthlyUserRegistrationDto
+                    {
+                        Month = monthStart.ToString("MMM"),
+                        Users = Convert.ToInt32(reader["UserCount"])
+                    }
+                );
             }
 
             return registrations;

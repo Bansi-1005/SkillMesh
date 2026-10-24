@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SkillMesh.API.DTOs.UserManagement;
 using SkillMesh.API.Helpers;
 using SkillMesh.API.Interfaces.IServices;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
-
 
 namespace SkillMesh.API.Controllers
 {
@@ -23,58 +23,45 @@ namespace SkillMesh.API.Controllers
         }
 
         // GET: api/UserManagement/users
-        [Authorize(Roles = RoleNames.SuperAdmin)]
+        // Only Super Admin can view all users.
         [HttpGet("users")]
+        [Authorize(Roles = RoleNames.SuperAdmin)]
         public async Task<IActionResult> GetUsers()
         {
             try
             {
-                var users = await _service.GetUsersAsync();
-                return Ok(users);
+                return Ok(await _service.GetUsersAsync());
             }
             catch (InvalidOperationException)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Could not load users due to a server or database error."
+                    message = "Could not load users due to a server or database error."
                 });
             }
         }
 
-        // GET: api/UserManagement/organizations
-        [Authorize(Roles = RoleNames.SuperAdmin)]
-        [HttpGet("organizations")]
-        public async Task<IActionResult> GetOrganizations()
-        {
-            try
-            {
-                var organizations =
-                    await _service.GetOrganizationsAsync();
-
-                return Ok(organizations);
-            }
-            catch (InvalidOperationException)
-            {
-                return StatusCode(500, new
-                {
-                    Message = "Could not load organizations due to a server or database error."
-                });
-            }
-        }
-
-        // PUT: api/UserManagement/users/5/status
-        // Body: { "isActive": false }
-        [Authorize(Roles = RoleNames.SuperAdmin)]
+        // PUT: api/UserManagement/users/{userId}/status
+        // Only Super Admin can change general user status.
         [HttpPut("users/{userId:int}/status")]
+        [Authorize(Roles = RoleNames.SuperAdmin)]
         public async Task<IActionResult> UpdateUserStatus(
-     int userId,
-     [FromBody] UpdateUserStatusDto request)
+            int userId,
+            [FromBody] UpdateUserStatusDto request)
         {
             if (userId <= 0)
             {
                 return BadRequest(new
                 {
-                    Message = "A valid user ID is required."
+                    message = "A valid user ID is required."
+                });
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Status information is required."
                 });
             }
 
@@ -88,76 +75,63 @@ namespace SkillMesh.API.Controllers
                 {
                     return NotFound(new
                     {
-                        Message = "The user was not found, or this account's role cannot be changed here. Super Admin accounts cannot be changed through this endpoint."
+                        message = "User not found, or the account cannot be changed."
                     });
                 }
 
                 return Ok(new
                 {
-                    Message = request.IsActive
+                    message = request.IsActive
                         ? "User activated successfully."
                         : "User deactivated successfully.",
-                    UserId = userId,
-                    IsActive = request.IsActive
+                    userId,
+                    isActive = request.IsActive
                 });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                return BadRequest(new { message = ex.Message });
             }
             catch (InvalidOperationException)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Could not update the user status due to a server or database error."
+                    message = "Could not update user status due to a server or database error."
                 });
             }
         }
 
-
-
-        // GET: api/UserManagement/organization-learners
-        [Authorize(Roles = RoleNames.Admin)]
-        [HttpGet("organization-learners")]
-        public async Task<IActionResult> GetOrganizationLearners()
+        // GET: api/UserManagement/learners
+        // Admin and Super Admin can view learners.
+        [HttpGet("learners")]
+        [Authorize(Roles = RoleNames.SuperAdmin + "," + RoleNames.Admin)]
+        public async Task<IActionResult> GetLearners()
         {
-            string? organizationIdClaim =
-                User.FindFirst("OrganizationId")?.Value;
-
-            if (!int.TryParse(
-                organizationIdClaim,
-                out int organizationId) ||
-                organizationId <= 0)
-            {
-                return Forbid();
-            }
-
             try
             {
-                var learners =
-                    await _service.GetOrganizationLearnersAsync(
-                        organizationId);
+                var users = await _service.GetUsersAsync();
+
+                var learners = users
+                    .Where(user => user.RoleId == 3)
+                    .ToList();
 
                 return Ok(learners);
             }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
             catch (InvalidOperationException)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Could not load organization learners."
+                    message = "Could not load learners due to a server or database error."
                 });
             }
         }
 
-        // PUT: api/UserManagement/organization-learners/5/status
-        // Body: { "isActive": false }
-        [Authorize(Roles = RoleNames.Admin)]
-        [HttpPut("organization-learners/{userId:int}/status")]
-        public async Task<IActionResult> UpdateOrganizationLearnerStatus(
+        // PUT: api/UserManagement/learners/{userId}/status
+        // Super Admin can activate or deactivate.
+        // Admin can deactivate active learners only.
+        [HttpPut("learners/{userId:int}/status")]
+        [Authorize(Roles = RoleNames.SuperAdmin + "," + RoleNames.Admin)]
+        public async Task<IActionResult> UpdateLearnerStatus(
             int userId,
             [FromBody] UpdateUserStatusDto request)
         {
@@ -165,57 +139,78 @@ namespace SkillMesh.API.Controllers
             {
                 return BadRequest(new
                 {
-                    Message = "A valid learner ID is required."
+                    message = "A valid learner ID is required."
                 });
             }
 
-            string? organizationIdClaim =
-                User.FindFirst("OrganizationId")?.Value;
-
-            if (!int.TryParse(
-                organizationIdClaim,
-                out int organizationId) ||
-                organizationId <= 0)
+            if (request == null)
             {
-                return Forbid();
+                return BadRequest(new
+                {
+                    message = "Status information is required."
+                });
             }
+
+            bool isSuperAdmin = User.IsInRole(RoleNames.SuperAdmin);
 
             try
             {
-                bool updated =
-                    await _service.SetOrganizationLearnerStatusAsync(
-                        userId,
-                        organizationId,
-                        request.IsActive);
+                // Verify that the requested account is a learner.
+                var users = await _service.GetUsersAsync();
 
-                if (!updated)
+                var learner = users.FirstOrDefault(
+                    user => user.UserId == userId && user.RoleId == 3);
+
+                if (learner == null)
                 {
                     return NotFound(new
                     {
-                        Message =
-                            "The learner was not found in your organization, or the account is globally inactive."
+                        message = "Learner not found."
                     });
                 }
 
+                // The service/repository enforces the status policy.
+                bool updated = await _service.SetLearnerStatusAsync(
+                    userId,
+                    request.IsActive,
+                    isSuperAdmin);
+
+
+                if (!updated)
+                {
+                    return Conflict(new
+                    {
+                        message = isSuperAdmin
+                            ? "The learner status could not be updated. Please refresh and try again."
+                            : request.IsActive
+                                ? "You cannot reactivate this learner because Super Admin deactivated the account, or the learner status has changed. Contact Super Admin if needed."
+                                : "The learner could not be deactivated because the account may already be inactive. Please refresh and try again."
+                    });
+                }
+
+
                 return Ok(new
                 {
-                    Message = request.IsActive
-                        ? "Learner enabled for your organization."
-                        : "Learner disabled for your organization.",
-                    UserId = userId,
-                    OrganizationId = organizationId,
-                    AdminIsActive = request.IsActive
+                    message = request.IsActive
+                        ? "Learner activated successfully."
+                        : isSuperAdmin
+                            ? "Learner deactivated by Super Admin successfully."
+                            : "Learner deactivated successfully.",
+                    userId,
+                    isActive = request.IsActive,
+                    deactivatedBySuperAdmin =
+                        !request.IsActive && isSuperAdmin
                 });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                return BadRequest(new { message = ex.Message });
             }
             catch (InvalidOperationException)
             {
                 return StatusCode(500, new
                 {
-                    Message = "Could not update the learner status."
+                    message = "Could not update learner status due to a server or database error."
                 });
             }
         }

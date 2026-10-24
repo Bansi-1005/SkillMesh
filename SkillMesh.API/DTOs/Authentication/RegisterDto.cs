@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using System.ComponentModel.DataAnnotations;
 
 namespace SkillMesh.API.DTOs.Authentication
 {
@@ -19,7 +20,5 @@ namespace SkillMesh.API.DTOs.Authentication
         public string Password { get; set; } = string.Empty;
 
         public string? Phone { get; set; }
-
-        public int? OrganizationId { get; set; }
     }
 }

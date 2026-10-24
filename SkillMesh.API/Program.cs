@@ -27,9 +27,9 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped<DbConnectionFactory>();
 
-// Organization
-builder.Services.AddScoped<IOrganizationRepo, OrganizationRepo>();
-builder.Services.AddScoped<IOrganizationService, OrganizationService>();
+//// Organization
+//builder.Services.AddScoped<IOrganizationRepo, OrganizationRepo>();
+//builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
 // Skill Category
 builder.Services.AddScoped<ISkillCategoryRepo, SkillCategoryRepo>();
@@ -90,6 +90,9 @@ builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<ISuperAdminDashboardRepo, SuperAdminDashboardRepo>();
 builder.Services.AddScoped<ISuperAdminDashboardService, SuperAdminDashboardService>();
 
+
+builder.Services.AddScoped<IAdminDashboardRepo, AdminDashboardRepo>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 
 builder.Services.AddScoped<JwtHelper>();
 

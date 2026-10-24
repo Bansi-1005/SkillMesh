@@ -19,13 +19,13 @@ namespace SkillMesh.API.DTOs.UserManagement
 
         public bool AdminIsActive { get; set; }
 
-        public bool OrganizationIsActive { get; set; }
+        //public bool OrganizationIsActive { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
-        public bool EffectiveIsActive =>
-            IsActive &&
-            AdminIsActive &&
-            OrganizationIsActive;
+        //public bool EffectiveIsActive =>
+        //    IsActive &&
+        //    AdminIsActive &&
+        //    OrganizationIsActive;
     }
 }

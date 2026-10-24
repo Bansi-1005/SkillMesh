@@ -1,5 +1,4 @@
-﻿
-namespace SkillMesh.API.DTOs.UserManagement
+﻿namespace SkillMesh.API.DTOs.UserManagement
 {
     public class UserListDto
     {
@@ -13,10 +12,6 @@ namespace SkillMesh.API.DTOs.UserManagement
 
         public string? Phone { get; set; }
 
-        public int? OrganizationId { get; set; }
-
-        public string? OrganizationName { get; set; }
-
         public int RoleId { get; set; }
 
         public string RoleName { get; set; } = string.Empty;
@@ -24,5 +19,7 @@ namespace SkillMesh.API.DTOs.UserManagement
         public bool IsActive { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public bool DeactivatedBySuperAdmin { get; set; }
     }
 }

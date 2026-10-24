@@ -1,4 +1,5 @@
-﻿namespace SkillMesh.API.DTOs.Authentication
+﻿
+namespace SkillMesh.API.DTOs.Authentication
 {
     public class LoginResponseDto
     {
@@ -9,7 +10,5 @@
         public string Email { get; set; } = string.Empty;
 
         public string Role { get; set; } = string.Empty;
-
-        public int? OrganizationId { get; set; }
     }
 }

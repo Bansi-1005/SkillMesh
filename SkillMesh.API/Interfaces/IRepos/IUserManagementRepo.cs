@@ -1,6 +1,4 @@
-﻿
-using SkillMesh.API.DTOs.Organizations;
-using SkillMesh.API.DTOs.UserManagement;
+﻿using SkillMesh.API.DTOs.UserManagement;
 
 namespace SkillMesh.API.Interfaces.IRepos
 {
@@ -8,18 +6,13 @@ namespace SkillMesh.API.Interfaces.IRepos
     {
         Task<List<UserListDto>> GetUsersAsync();
 
-        Task<List<OrganizationListDto>> GetOrganizationsAsync();
-
         Task<bool> SetUserStatusAsync(
             int userId,
             bool isActive);
 
-        Task<IEnumerable<LearnerManagementDto>>
-            GetOrganizationLearnersAsync(int organizationId);
-
-        Task<bool> SetOrganizationLearnerStatusAsync(
+        Task<bool> SetLearnerStatusAsync(
             int userId,
-            int organizationId,
-            bool adminIsActive);
+            bool isActive,
+            bool isSuperAdmin);
     }
 }

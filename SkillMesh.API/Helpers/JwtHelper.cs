@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -9,103 +10,60 @@ namespace SkillMesh.API.Helpers
     {
         private readonly IConfiguration _configuration;
 
-        public JwtHelper(
-            IConfiguration configuration)
+        public JwtHelper(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
-
         public string GenerateToken(
             int userId,
             string email,
-            string role,
-            int? organizationId)
+            string role)
         {
-            var jwtSettings =
-                _configuration.GetSection("Jwt");
+            var jwtSettings = _configuration.GetSection("Jwt");
 
+            string key = jwtSettings["Key"]!;
+            string issuer = jwtSettings["Issuer"]!;
+            string audience = jwtSettings["Audience"]!;
 
-            string key =
-                jwtSettings["Key"]!;
+            double expiryMinutes = Convert.ToDouble(
+                jwtSettings["ExpiryMinutes"]
+            );
 
-            string issuer =
-                jwtSettings["Issuer"]!;
-
-            string audience =
-                jwtSettings["Audience"]!;
-
-            double expiryMinutes =
-                Convert.ToDouble(
-                    jwtSettings["ExpiryMinutes"]
-                );
-
-
-            var claims =
-                new List<Claim>
-                {
-                    new Claim(
-                        ClaimTypes.NameIdentifier,
-                        userId.ToString()
-                    ),
-
-                    new Claim(
-                        ClaimTypes.Email,
-                        email
-                    ),
-
-                    new Claim(
-                        ClaimTypes.Role,
-                        role
-                    )
-                };
-
-
-            // ---------------------------------------------
-            // OrganizationId
-            // ---------------------------------------------
-
-            if (organizationId.HasValue)
+            var claims = new List<Claim>
             {
-                claims.Add(
-                    new Claim(
-                        "OrganizationId",
-                        organizationId.Value.ToString()
-                    )
-                );
-            }
+                new Claim(
+                    ClaimTypes.NameIdentifier,
+                    userId.ToString()
+                ),
 
+                new Claim(
+                    ClaimTypes.Email,
+                    email
+                ),
 
-            var securityKey =
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(key)
-                );
+                new Claim(
+                    ClaimTypes.Role,
+                    role
+                )
+            };
 
+            var securityKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(key)
+            );
 
-            var credentials =
-                new SigningCredentials(
-                    securityKey,
-                    SecurityAlgorithms.HmacSha256
-                );
+            var credentials = new SigningCredentials(
+                securityKey,
+                SecurityAlgorithms.HmacSha256
+            );
 
-
-            var token =
-                new JwtSecurityToken(
-                    issuer: issuer,
-
-                    audience: audience,
-
-                    claims: claims,
-
-                    expires:
-                        DateTime.UtcNow.AddMinutes(
-                            expiryMinutes
-                        ),
-
-                    signingCredentials:
-                        credentials
-                );
-
+            var token = new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+                signingCredentials: credentials
+            );
 
             return new JwtSecurityTokenHandler()
                 .WriteToken(token);
