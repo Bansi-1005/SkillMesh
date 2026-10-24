@@ -1,7 +1,6 @@
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Building2,
   Users,
   ShieldCheck,
   Brain,
@@ -12,6 +11,9 @@ import {
   BookOpen,
   CheckCircle2,
   GraduationCap,
+  UserCheck,
+  BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 import DashboardLayout from "../../components/DashboardLayout";
@@ -22,115 +24,167 @@ const API_BASE_URL =
 const formatNumber = (value) =>
   Number(value ?? 0).toLocaleString("en-IN");
 
-function StatCard({ label, value, note, icon: Icon, color }) {
+const getPercentage = (value) =>
+  Math.max(0, Math.min(100, Number(value ?? 0)));
+
+function StatCard({ label, value, note, icon: Icon, iconStyle }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="group rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-          {label}
-        </p>
-        <span className={`rounded-xl p-2.5 ${color}`}>
-          <Icon size={20} />
-        </span>
+        <p className="text-sm font-medium text-slate-500">{label}</p>
+        <div className={`rounded-xl p-3 ${iconStyle}`}>
+          <Icon size={21} />
+        </div>
       </div>
 
-      <p className="mt-5 text-3xl font-bold text-[#17233F]">
-        {value}
+      <p className="mt-5 text-3xl font-bold tracking-tight text-[#17233F]">
+        {formatNumber(value)}
       </p>
-      <p className="mt-2 text-xs text-slate-500">{note}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{note}</p>
+    </div>
+  );
+}
+
+function SectionHeading({ icon: Icon, title, description, color }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`shrink-0 rounded-xl p-3 ${color}`}>
+        <Icon size={21} />
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-lg font-bold text-[#17233F]">{title}</h2>
+        <p className="mt-1 text-sm leading-5 text-slate-500">
+          {description}
+        </p>
+      </div>
     </div>
   );
 }
 
 function UserGrowthChart({ registrations = [] }) {
-  const values = registrations.map((item) => Number(item.users ?? 0));
+  const values = registrations.map((item) =>
+    Number(item.users ?? 0)
+  );
+
+  const totalRegistrations = values.reduce(
+    (sum, value) => sum + value,
+    0
+  );
+
   const maxValue = Math.max(...values, 1);
 
   const chartWidth = 600;
-  const chartHeight = 210;
-  const left = 36;
-  const right = 12;
-  const top = 18;
-  const bottom = 30;
+  const chartHeight = 245;
+  const left = 42;
+  const right = 18;
+  const top = 24;
+  const bottom = 38;
+
   const plotWidth = chartWidth - left - right;
   const plotHeight = chartHeight - top - bottom;
 
   const points = registrations.map((item, index) => {
+    const users = Number(item.users ?? 0);
+
     const x =
       registrations.length <= 1
         ? left + plotWidth / 2
         : left + (index / (registrations.length - 1)) * plotWidth;
 
-    const y = top + plotHeight - (Number(item.users ?? 0) / maxValue) * plotHeight;
+    const y =
+      top + plotHeight - (users / maxValue) * plotHeight;
 
-    return { x, y, month: item.month, users: Number(item.users ?? 0) };
+    return {
+      x,
+      y,
+      month: item.month ?? "",
+      users,
+    };
   });
 
-  const linePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const linePoints = points
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+
   const areaPoints =
-    points.length > 0
-      ? `${left},${top + plotHeight} ${linePoints} ${points[points.length - 1].x},${top + plotHeight}`
+    points.length > 1
+      ? `${left},${top + plotHeight} ${linePoints} ${
+          points[points.length - 1].x
+        },${top + plotHeight}`
       : "";
 
   return (
     <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-3xl font-bold text-[#17233F]">
+            {formatNumber(totalRegistrations)}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Registrations during the displayed period
+          </p>
+        </div>
+
+        <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-600">
+          <TrendingUp size={15} />
+          Last 6 months
+        </span>
+      </div>
+
       {registrations.length === 0 ? (
-        <div className="flex h-56 items-center justify-center text-sm text-slate-500">
-          No monthly registration data available.
+        <div className="mt-5 flex h-56 flex-col items-center justify-center rounded-xl bg-slate-50 text-center">
+          <BarChart3 size={32} className="text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-600">
+            No registration history available
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Registration data will appear here when provided by the API.
+          </p>
         </div>
       ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-2xl font-bold text-[#17233F]">
-                {formatNumber(values.reduce((sum, value) => sum + value, 0))}
-              </p>
-              <p className="text-xs text-slate-500">
-                Registrations across the displayed months
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-600">
-              <TrendingUp size={14} />
-              Last 6 months
-            </span>
-          </div>
+        <div className="mt-5">
+          <svg
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            role="img"
+            aria-label="Monthly user registrations"
+            className="h-auto w-full overflow-visible"
+          >
+            {[0, 1, 2, 3].map((step) => {
+              const y = top + (plotHeight / 3) * step;
+              const value = Math.round(maxValue * (1 - step / 3));
 
-          <div className="mt-4 w-full">
-            <svg
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              role="img"
-              aria-label="Monthly user registrations line chart"
-              className="h-auto w-full overflow-visible"
-            >
-              {[0, 1, 2, 3].map((step) => {
-                const y = top + (plotHeight / 3) * step;
-                const value = Math.round(maxValue * (1 - step / 3));
+              return (
+                <g key={step}>
+                  <line
+                    x1={left}
+                    y1={y}
+                    x2={chartWidth - right}
+                    y2={y}
+                    stroke="#E2E8F0"
+                    strokeDasharray="4 5"
+                  />
+                  <text
+                    x={left - 9}
+                    y={y + 4}
+                    fontSize="10"
+                    textAnchor="end"
+                    fill="#94A3B8"
+                  >
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
 
-                return (
-                  <g key={step}>
-                    <line
-                      x1={left}
-                      y1={y}
-                      x2={chartWidth - right}
-                      y2={y}
-                      stroke="#E9EDF5"
-                      strokeDasharray="4 5"
-                    />
-                    <text
-                      x={left - 8}
-                      y={y + 4}
-                      fontSize="10"
-                      textAnchor="end"
-                      fill="#94A3B8"
-                    >
-                      {value}
-                    </text>
-                  </g>
-                );
-              })}
+            {points.length > 1 && (
+              <polygon
+                points={areaPoints}
+                fill="#5540F5"
+                opacity="0.09"
+              />
+            )}
 
-              <polygon points={areaPoints} fill="#5540F5" opacity="0.09" />
-
+            {points.length > 1 && (
               <polyline
                 points={linePoints}
                 fill="none"
@@ -139,96 +193,212 @@ function UserGrowthChart({ registrations = [] }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+            )}
 
-              {points.map((point, index) => (
-                <g key={`${point.month}-${index}`}>
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r="4.5"
-                    fill="#FFFFFF"
-                    stroke="#5540F5"
-                    strokeWidth="2.5"
-                  />
-                  <text
-                    x={point.x}
-                    y={chartHeight - 7}
-                    fontSize="11"
-                    textAnchor="middle"
-                    fill="#64748B"
-                  >
-                    {point.month}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          </div>
-        </>
+            {points.map((point, index) => (
+              <g key={`${point.month}-${index}`}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="5"
+                  fill="white"
+                  stroke="#5540F5"
+                  strokeWidth="2.5"
+                />
+                <text
+                  x={point.x}
+                  y={chartHeight - 8}
+                  fontSize="11"
+                  textAnchor="middle"
+                  fill="#64748B"
+                >
+                  {point.month}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
       )}
     </div>
   );
 }
 
-function OrganizationStatusChart({ total = 0, active = 0 }) {
-  const safeTotal = Math.max(0, Number(total ?? 0));
-  const safeActive = Math.min(
-    safeTotal,
-    Math.max(0, Number(active ?? 0))
-  );
-  const inactive = Math.max(0, safeTotal - safeActive);
-  const activePercentage =
-    safeTotal > 0 ? Math.round((safeActive / safeTotal) * 100) : 0;
-
-  const inactivePercentage = 100 - activePercentage;
+function ProgressBar({ label, value, color = "bg-emerald-500" }) {
+  const percentage = getPercentage(value);
 
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
-      <div
-        className="relative grid h-40 w-40 shrink-0 place-items-center rounded-full"
-        style={{
-          background: `conic-gradient(#5540F5 0% ${activePercentage}%, #E2E8F0 ${activePercentage}% 100%)`,
-        }}
-        role="img"
-        aria-label={`${safeActive} active and ${inactive} inactive organizations`}
-      >
-        <div className="grid h-28 w-28 place-items-center rounded-full bg-white text-center">
-          <div>
-            <p className="text-3xl font-bold text-[#17233F]">
-              {formatNumber(safeTotal)}
-            </p>
-            <p className="text-xs text-slate-500">Organizations</p>
-          </div>
-        </div>
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+        <span className="text-slate-500">{label}</span>
+        <span className="font-semibold text-[#17233F]">
+          {percentage}%
+        </span>
       </div>
-
-      <div className="w-full space-y-5 sm:w-auto sm:min-w-36">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-[#5540F5]" />
-            <span className="text-sm text-slate-600">Active</span>
-            <span className="ml-auto font-bold text-[#17233F]">
-              {formatNumber(safeActive)}
-            </span>
-          </div>
-          <p className="ml-5 mt-1 text-xs text-slate-400">
-            {activePercentage}% of all organizations
-          </p>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-slate-200" />
-            <span className="text-sm text-slate-600">Inactive</span>
-            <span className="ml-auto font-bold text-[#17233F]">
-              {formatNumber(inactive)}
-            </span>
-          </div>
-          <p className="ml-5 mt-1 text-xs text-slate-400">
-            {inactivePercentage}% of all organizations
-          </p>
-        </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${color}`}
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
+  );
+}
+
+function UserBreakdown({ dashboard }) {
+  const totalUsers = Number(dashboard.totalUsers ?? 0);
+  const totalAdmins = Number(dashboard.totalAdmins ?? 0);
+  const activeUsers = Number(dashboard.activeUsers ?? 0);
+  const learners = Math.max(0, totalUsers - totalAdmins);
+
+  const activePercentage =
+    dashboard.activeUsersPercentage ??
+    (totalUsers > 0
+      ? Math.round((activeUsers / totalUsers) * 100)
+      : 0);
+
+  const adminPercentage =
+    totalUsers > 0
+      ? Math.round((totalAdmins / totalUsers) * 100)
+      : 0;
+
+  return (
+    <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
+      <SectionHeading
+        icon={Users}
+        title="User Breakdown"
+        description="Understand the composition of your platform users."
+        color="bg-indigo-50 text-indigo-600"
+      />
+
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
+          <div className="rounded-xl bg-white p-3 text-indigo-600 shadow-sm">
+            <GraduationCap size={21} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-[#17233F]">Learners</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Accounts without the Admin role
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-[#17233F]">
+            {formatNumber(learners)}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
+          <div className="rounded-xl bg-white p-3 text-emerald-600 shadow-sm">
+            <ShieldCheck size={21} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-[#17233F]">Administrators</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Users with the Admin role
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-[#17233F]">
+            {formatNumber(totalAdmins)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-slate-100 pt-5">
+        <h3 className="mb-5 text-sm font-bold text-[#17233F]">
+          Account health
+        </h3>
+
+        <div className="space-y-5">
+          <ProgressBar
+            label="Active accounts"
+            value={activePercentage}
+          />
+          <ProgressBar
+            label="Administrator share"
+            value={adminPercentage}
+            color="bg-indigo-500"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LearningOverview({ dashboard }) {
+  const totalCourses = Number(dashboard.totalCourses ?? 0);
+  const publishedCourses = Number(dashboard.publishedCourses ?? 0);
+  const totalSkills = Number(dashboard.totalSkills ?? 0);
+
+  const publicationPercentage =
+    dashboard.publishedCoursesPercentage ??
+    (totalCourses > 0
+      ? Math.round((publishedCourses / totalCourses) * 100)
+      : 0);
+
+  return (
+    <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6">
+      <SectionHeading
+        icon={BookOpen}
+        title="Learning Resources"
+        description="A snapshot of the content available on SkillMesh."
+        color="bg-purple-50 text-purple-600"
+      />
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3 xl:grid-cols-1">
+        <div className="flex items-center gap-4 rounded-xl border border-slate-100 p-4">
+          <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
+            <Brain size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-500">
+              Skills in library
+            </p>
+            <p className="mt-1 text-2xl font-bold text-[#17233F]">
+              {formatNumber(totalSkills)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 rounded-xl border border-slate-100 p-4">
+          <div className="rounded-xl bg-purple-50 p-3 text-purple-600">
+            <BookOpen size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-500">
+              Total courses
+            </p>
+            <p className="mt-1 text-2xl font-bold text-[#17233F]">
+              {formatNumber(totalCourses)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 rounded-xl border border-slate-100 p-4">
+          <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-500">
+              Published courses
+            </p>
+            <p className="mt-1 text-2xl font-bold text-[#17233F]">
+              {formatNumber(publishedCourses)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-xl bg-slate-50 p-4">
+        <ProgressBar
+          label="Course publication rate"
+          value={publicationPercentage}
+          color="bg-purple-500"
+        />
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          This percentage compares published courses with all courses
+          recorded by the platform.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -237,7 +407,7 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -245,9 +415,7 @@ export default function SuperAdminDashboard() {
       const token = localStorage.getItem("skillmesh_token");
 
       if (!token) {
-        throw new Error(
-          "Authentication token not found. Please log in again."
-        );
+        throw new Error("Please log in again to load dashboard data.");
       }
 
       const response = await fetch(
@@ -263,21 +431,18 @@ export default function SuperAdminDashboard() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error(
-            "Your session is invalid or expired. Please log in again."
-          );
+          throw new Error("Your session has expired. Please log in again.");
         }
 
         if (response.status === 403) {
           throw new Error(
-            "Access denied. This dashboard requires the Super Admin role."
+            "Access denied. This page requires the Super Admin role."
           );
         }
 
-        const responseText = await response.text();
+        const message = await response.text();
         throw new Error(
-          responseText ||
-            `Unable to load dashboard. HTTP ${response.status}`
+          message || `Unable to load dashboard (HTTP ${response.status}).`
         );
       }
 
@@ -285,356 +450,222 @@ export default function SuperAdminDashboard() {
       setDashboard(data);
     } catch (err) {
       setError(
-        err.message || "Something went wrong while loading the dashboard."
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while loading the dashboard."
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
+
+  const registrations = Array.isArray(
+    dashboard?.monthlyUserRegistrations
+  )
+    ? dashboard.monthlyUserRegistrations
+    : [];
 
   const stats = dashboard
     ? [
         {
-          label: "Organizations",
-          value: formatNumber(dashboard.totalOrganizations),
-          note: `${formatNumber(dashboard.activeOrganizations)} active`,
-          icon: Building2,
-          color: "bg-indigo-50 text-indigo-600",
-        },
-        {
           label: "Total Users",
-          value: formatNumber(dashboard.totalUsers),
+          value: dashboard.totalUsers,
           note: `+${formatNumber(dashboard.newUsersThisMonth)} this month`,
           icon: Users,
-          color: "bg-purple-50 text-purple-600",
+          iconStyle: "bg-purple-50 text-purple-600",
+        },
+        {
+          label: "Active Users",
+          value: dashboard.activeUsers,
+          note: "Currently active user accounts",
+          icon: UserCheck,
+          iconStyle: "bg-cyan-50 text-cyan-600",
         },
         {
           label: "Administrators",
-          value: formatNumber(dashboard.totalAdmins),
-          note: "Users with the Admin role",
+          value: dashboard.totalAdmins,
+          note: "Accounts with the Admin role",
           icon: ShieldCheck,
-          color: "bg-emerald-50 text-emerald-600",
+          iconStyle: "bg-emerald-50 text-emerald-600",
         },
         {
           label: "Skill Records",
-          value: formatNumber(dashboard.totalSkills),
-          note: "Total skills in the platform",
+          value: dashboard.totalSkills,
+          note: "Skills recorded in the platform",
           icon: Brain,
-          color: "bg-amber-50 text-amber-600",
+          iconStyle: "bg-amber-50 text-amber-600",
         },
-      ]
-    : [];
-
-  const organizations = dashboard?.recentOrganizations ?? [];
-  const registrations = dashboard?.monthlyUserRegistrations ?? [];
-
-  const indicators = dashboard
-    ? [
-        ["Active users", dashboard.activeUsersPercentage],
-        ["Published learning content", dashboard.publishedCoursesPercentage],
       ]
     : [];
 
   return (
     <DashboardLayout role="Super Admin" title="Platform Overview">
-      <p className="text-sm text-slate-500">Platform administration</p>
-
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold text-[#17233F]">
-            Welcome back, System Admin
-          </h1>
-          <p className="mt-2 text-slate-500">
-            Monitor organizations, users, skills, and learning activity across SkillMesh.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={fetchDashboard}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw
-            size={16}
-            className={loading ? "animate-spin" : ""}
-          />
-          Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-        >
-          <AlertCircle size={20} className="mt-0.5 shrink-0" />
+      <main className="min-w-0 space-y-6 pb-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-semibold">Unable to load dashboard data</p>
-            <p className="mt-1 break-words">{error}</p>
-            <button
-              type="button"
-              onClick={fetchDashboard}
-              className="mt-3 font-semibold underline"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loading && !dashboard ? (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => (
-            <div
-              key={item}
-              className="animate-pulse rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
-            >
-              <div className="h-3 w-28 rounded bg-slate-200" />
-              <div className="mt-6 h-8 w-20 rounded bg-slate-200" />
-              <div className="mt-3 h-3 w-32 rounded bg-slate-100" />
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-indigo-600">
+              <Sparkles size={16} />
+              <span>Super Admin Workspace</span>
             </div>
-          ))}
-        </div>
-      ) : dashboard ? (
-        <>
-          <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
+
+            <h1 className="text-2xl font-bold tracking-tight text-[#17233F] sm:text-3xl">
+              Welcome back, System Admin
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              Manage platform users, monitor skill development, and review
+              learning resources from one place.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchDashboard}
+            disabled={loading}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw
+              size={17}
+              className={loading ? "animate-spin" : ""}
+            />
+            {loading ? "Loading..." : "Refresh"}
+          </button>
+        </header>
+
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <AlertCircle size={20} className="mt-0.5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                Unable to load dashboard data
+              </p>
+              <p className="mt-1 break-words">{error}</p>
+              <button
+                type="button"
+                onClick={fetchDashboard}
+                className="mt-3 font-semibold underline"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {loading && !dashboard ? (
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5"
+              >
+                <div className="h-4 w-28 rounded bg-slate-200" />
+                <div className="mt-6 h-9 w-20 rounded bg-slate-200" />
+                <div className="mt-3 h-3 w-36 rounded bg-slate-100" />
+              </div>
             ))}
           </section>
+        ) : dashboard ? (
+          <>
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {stats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </section>
 
-          <section className="mt-6 grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
-              <div className="mb-5 flex items-start gap-3">
-                <span className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600">
-                  <TrendingUp size={20} />
-                </span>
-                <div>
-                  <h2 className="text-lg font-bold text-[#17233F]">
-                    User growth
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Monthly user registrations across the platform.
-                  </p>
-                </div>
-              </div>
-              <UserGrowthChart registrations={registrations} />
-            </div>
+            <section className="grid items-stretch gap-6 xl:grid-cols-3">
+              <div className="min-w-0 rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
+                <SectionHeading
+                  icon={TrendingUp}
+                  title="User Growth"
+                  description="Track new registrations across the displayed months."
+                  color="bg-indigo-50 text-indigo-600"
+                />
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-              <div className="mb-7 flex items-start gap-3">
-                <span className="rounded-xl bg-purple-50 p-2.5 text-purple-600">
-                  <Building2 size={20} />
-                </span>
-                <div>
-                  <h2 className="text-lg font-bold text-[#17233F]">
-                    Organization status
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Active and inactive organizations.
-                  </p>
+                <div className="mt-6">
+                  <UserGrowthChart registrations={registrations} />
                 </div>
               </div>
 
-              <OrganizationStatusChart
-                total={dashboard.totalOrganizations}
-                active={dashboard.activeOrganizations}
+              <div className="min-w-0">
+                <LearningOverview dashboard={dashboard} />
+              </div>
+            </section>
+
+            <section className="grid items-stretch gap-6 xl:grid-cols-2">
+              <UserBreakdown dashboard={dashboard} />
+
+              <section className="flex flex-col justify-between rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 shadow-sm sm:p-8">
+                <div>
+                  <div className="inline-flex rounded-2xl bg-white p-3 text-indigo-600 shadow-sm">
+                    <Activity size={24} />
+                  </div>
+
+                  <h2 className="mt-5 text-xl font-bold text-[#17233F]">
+                    Your platform at a glance
+                  </h2>
+
+                  <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600">
+                    SkillMesh brings learners, administrators, skills, and
+                    learning resources together in one platform. Use your
+                    Super Admin workspace to oversee platform activity and
+                    maintain the learning experience.
+                  </p>
+                </div>
+
+                <div className="mt-8 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                    <Users size={19} className="text-indigo-600" />
+                    <p className="mt-3 text-sm font-semibold text-[#17233F]">
+                      User Management
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Review and manage user accounts.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                    <BookOpen size={19} className="text-purple-600" />
+                    <p className="mt-3 text-sm font-semibold text-[#17233F]">
+                      Learning Resources
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Monitor skills and course availability.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </section>
+
+            <footer className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white px-4 py-3 text-xs leading-5 text-slate-500">
+              <CheckCircle2 size={17} className="shrink-0 text-emerald-600" />
+              Dashboard statistics are retrieved from the SkillMesh API.
+              Refresh to fetch the latest available data.
+            </footer>
+          </>
+        ) : (
+          !error && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+              <BarChart3
+                size={36}
+                className="mx-auto text-slate-300"
               />
-            </div>
-          </section>
-
-          <section className="mt-6 grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-[#17233F]">
-                    Top organizations
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    The seven organizations with the most registered users.
-                  </p>
-                </div>
-                <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
-                  Top 7
-                </span>
-              </div>
-
-              <div className="mt-6 overflow-x-auto">
-                <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead className="border-b text-xs uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="pb-3 pr-3">Organization</th>
-                      <th className="pb-3 pr-3">Code</th>
-                      <th className="pb-3 pr-3">Users</th>
-                      <th className="pb-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {organizations.length > 0 ? (
-                      organizations.map((org, index) => (
-                        <tr
-                          key={org.code || `${org.name}-${index}`}
-                          className="border-b border-slate-50 transition hover:bg-slate-50/70"
-                        >
-                          <td className="py-4 pr-3 font-semibold text-slate-700">
-                            <div className="flex items-center gap-3">
-                              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
-                                <Building2 size={17} />
-                              </span>
-                              <span>{org.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 pr-3 text-slate-500">
-                            {org.code || "—"}
-                          </td>
-                          <td className="py-4 pr-3 font-semibold text-slate-700">
-                            {formatNumber(org.users)}
-                          </td>
-                          <td className="py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                                org.status === "Active"
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-amber-50 text-amber-700"
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  org.status === "Active"
-                                    ? "bg-emerald-500"
-                                    : "bg-amber-500"
-                                }`}
-                              />
-                              {org.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-8 text-center text-slate-500"
-                        >
-                          No organizations found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-[#17233F]">
-                Learning content
+              <h2 className="mt-4 font-semibold text-[#17233F]">
+                No dashboard data available
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Published learning resources on SkillMesh.
+              <p className="mt-2 text-sm text-slate-500">
+                Try refreshing the page.
               </p>
-
-              <div className="mt-6 flex items-center gap-4 rounded-xl bg-purple-50 p-4">
-                <span className="rounded-xl bg-white p-3 text-purple-600 shadow-sm">
-                  <BookOpen size={22} />
-                </span>
-                <div>
-                  <p className="text-2xl font-bold text-[#17233F]">
-                    {formatNumber(dashboard.totalCourses)}
-                  </p>
-                  <p className="text-xs text-slate-500">Total courses</p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center gap-4 rounded-xl bg-emerald-50 p-4">
-                <span className="rounded-xl bg-white p-3 text-emerald-600 shadow-sm">
-                  <CheckCircle2 size={22} />
-                </span>
-                <div>
-                  <p className="text-2xl font-bold text-[#17233F]">
-                    {formatNumber(dashboard.publishedCourses)}
-                  </p>
-                  <p className="text-xs text-slate-500">Published courses</p>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <div className="mb-2 flex justify-between gap-3 text-sm">
-                  <span className="text-slate-600">Publication rate</span>
-                  <span className="font-bold text-[#17233F]">
-                    {Math.max(
-                      0,
-                      Math.min(100, Number(dashboard.publishedCoursesPercentage ?? 0))
-                    )}%
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-[#5540F5] transition-all duration-500"
-                    style={{
-                      width: `${Math.max(
-                        0,
-                        Math.min(100, Number(dashboard.publishedCoursesPercentage ?? 0))
-                      )}%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 border-t border-slate-100 pt-5">
-                <h3 className="mb-4 text-sm font-bold text-[#17233F]">
-                  Platform activity
-                </h3>
-                {indicators.map(([label, value]) => {
-                  const percentage = Math.max(
-                    0,
-                    Math.min(100, Number(value ?? 0))
-                  );
-
-                  return (
-                    <div key={label} className="mb-4 last:mb-0">
-                      <div className="mb-2 flex justify-between gap-2 text-xs">
-                        <span className="text-slate-500">{label}</span>
-                        <span className="font-semibold text-[#17233F]">
-                          {percentage}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-slate-100">
-                        <div
-                          className="h-1.5 rounded-full bg-emerald-500"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-5 flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                <GraduationCap size={19} className="text-indigo-600" />
-                <p className="text-xs text-slate-600">
-                  SkillMesh learning and career development platform
-                </p>
-              </div>
             </div>
-          </section>
-
-          <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 py-3 text-xs text-slate-500">
-            <Activity size={16} className="text-emerald-600" />
-            Dashboard statistics are retrieved from your SkillMesh API.
-          </div>
-        </>
-      ) : (
-        !error && (
-          <p className="mt-8 text-sm text-slate-500">
-            No dashboard data is available.
-          </p>
-        )
-      )}
+          )
+        )}
+      </main>
     </DashboardLayout>
   );
 }

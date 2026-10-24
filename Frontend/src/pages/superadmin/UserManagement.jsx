@@ -3,7 +3,6 @@ import {
   Users,
   Search,
   ShieldCheck,
-  Building2,
   Mail,
   Phone,
   RefreshCw,
@@ -34,7 +33,6 @@ const EMPTY_FORM = {
   email: "",
   password: "",
   phone: "",
-  organizationId: "",
   role: "Learner",
 };
 
@@ -52,10 +50,8 @@ function valueOf(object, camel, pascal) {
 }
 
 function getUserId(user) {
-  return (
-    valueOf(user, "userId", "UserId") ??
-    valueOf(user, "id", "Id")
-  );
+  return valueOf(user, "userId", "UserId") ??
+    valueOf(user, "id", "Id");
 }
 
 function getFirstName(user) {
@@ -91,15 +87,15 @@ function getRole(user) {
     .toLowerCase()
     .replace(/[\s_-]/g, "");
 
-  if (rawRole === "superadmin" || roleId === 1 || roleId === "1") {
+  if (rawRole === "superadmin" || Number(roleId) === 1) {
     return "Super Admin";
   }
 
-  if (rawRole === "admin" || roleId === 2 || roleId === "2") {
+  if (rawRole === "admin" || Number(roleId) === 2) {
     return "Admin";
   }
 
-  if (rawRole === "learner" || roleId === 3 || roleId === "3") {
+  if (rawRole === "learner" || Number(roleId) === 3) {
     return "Learner";
   }
 
@@ -117,24 +113,6 @@ function isActive(user) {
   );
 }
 
-function getOrganization(user) {
-  const name = valueOf(
-    user,
-    "organizationName",
-    "OrganizationName"
-  );
-
-  const id = valueOf(user, "organizationId", "OrganizationId");
-
-  if (name) return name;
-
-  if (id !== null && id !== undefined) {
-    return `Organization ID: ${id}`;
-  }
-
-  return "Platform-wide";
-}
-
 function getCreatedDate(user) {
   const value = valueOf(user, "createdAt", "CreatedAt");
 
@@ -148,7 +126,9 @@ function getCreatedDate(user) {
 }
 
 function getErrorMessage(data, fallback) {
-  if (typeof data === "string" && data.trim()) return data;
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
 
   if (data?.message) return data.message;
   if (data?.Message) return data.Message;
@@ -160,7 +140,9 @@ function getErrorMessage(data, fallback) {
       .flat()
       .filter(Boolean);
 
-    if (messages.length > 0) return messages.join(" ");
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
   }
 
   return fallback;
@@ -178,9 +160,73 @@ async function readResponse(response) {
   }
 }
 
+// Success message component.
+function SuccessMessage({ message, onDismiss }) {
+  if (!message) return null;
+
+  return (
+    <div
+      role="status"
+      className="mt-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+    >
+      <CheckCircle2
+        size={19}
+        className="mt-0.5 shrink-0"
+      />
+
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">Success</p>
+        <p className="mt-0.5 break-words">{message}</p>
+        <p className="mt-1 text-xs text-emerald-700">
+          This message will disappear automatically.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss success message"
+        className="rounded-lg p-1 text-emerald-700 transition hover:bg-emerald-100"
+      >
+        <X size={17} />
+      </button>
+    </div>
+  );
+}
+
+// Error message component.
+function ErrorMessage({ message, onRetry }) {
+  if (!message) return null;
+
+  return (
+    <div
+      role="alert"
+      className="mt-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
+    >
+      <AlertCircle
+        size={19}
+        className="mt-0.5 shrink-0"
+      />
+
+      <div className="min-w-0 flex-1">
+        <p className="break-words">{message}</p>
+
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 font-semibold underline"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
-  const [organizations, setOrganizations] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
 
   const [search, setSearch] = useState("");
@@ -189,19 +235,43 @@ export default function UserManagement() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [loading, setLoading] = useState(false);
-  const [organizationsLoading, setOrganizationsLoading] =
-    useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState(null);
 
   const [error, setError] = useState("");
   const [listError, setListError] = useState("");
-  const [organizationsError, setOrganizationsError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  // State for the custom confirmation modal.
+  // Separate success messages.
+  const [registrationSuccess, setRegistrationSuccess] = useState("");
+  const [tableSuccess, setTableSuccess] = useState("");
+
   const [confirmUser, setConfirmUser] = useState(null);
 
+  // NEW: Automatically dismiss the registration success message
+  // 4 seconds after it appears or changes.
+  useEffect(() => {
+    if (!registrationSuccess) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setRegistrationSuccess("");
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [registrationSuccess]);
+
+  // NEW: Automatically dismiss the table success message
+  // 4 seconds after it appears or changes.
+  useEffect(() => {
+    if (!tableSuccess) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setTableSuccess("");
+    }, 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [tableSuccess]);
+
+  // Load users from the backend.
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setListError("");
@@ -218,6 +288,7 @@ export default function UserManagement() {
       const response = await fetch(
         `${API_BASE_URL}/api/UserManagement/users`,
         {
+          method: "GET",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${token}`,
@@ -255,91 +326,59 @@ export default function UserManagement() {
     }
   }, []);
 
-  const loadOrganizations = useCallback(async () => {
-    setOrganizationsLoading(true);
-    setOrganizationsError("");
-
-    try {
-      const token = getAccessToken();
-
-      if (!token) {
-        throw new Error(
-          "Login token not found. Please log in again as Super Admin."
-        );
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/UserManagement/organizations`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401
-            ? "Your session has expired. Please log in again."
-            : response.status === 403
-              ? "Only a Super Admin can load organizations here."
-              : getErrorMessage(data, "Could not load organizations.")
-        );
-      }
-
-      if (!Array.isArray(data)) {
-        throw new Error(
-          "The organizations API did not return an array. Check its response in Swagger."
-        );
-      }
-
-      setOrganizations(data);
-    } catch (err) {
-      setOrganizationsError(
-        err instanceof TypeError
-          ? "Cannot connect to the backend while loading organizations."
-          : err.message || "Could not load organizations."
-      );
-    } finally {
-      setOrganizationsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     loadUsers();
-    loadOrganizations();
-  }, [loadUsers, loadOrganizations]);
+  }, [loadUsers]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search, roleFilter, statusFilter]);
 
-  // Open the custom confirmation popup.
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setError("");
+    setRegistrationSuccess("");
+  }
+
+  function clearForm() {
+    setForm(EMPTY_FORM);
+    setError("");
+    setRegistrationSuccess("");
+  }
+
+  // Open the confirmation modal before changing user status.
   function handleToggleStatus(user) {
     const role = getRole(user);
     const userId = getUserId(user);
 
     if (role === "Super Admin") {
-      setListError("Super Admin accounts cannot be changed here.");
+      setListError(
+        "Super Admin accounts cannot be changed here."
+      );
       return;
     }
 
     if (userId === null || userId === undefined) {
-      setListError("Cannot update status because the user ID is missing.");
+      setListError(
+        "Cannot update status because the user ID is missing."
+      );
       return;
     }
 
     if (updatingUserId !== null) return;
 
     setListError("");
-    setSuccess("");
+    setTableSuccess("");
     setConfirmUser(user);
   }
 
-  // Perform the update only after confirmation in the custom modal.
+  // Activate or deactivate a user.
   async function confirmToggleStatus() {
     if (!confirmUser) return;
 
@@ -349,13 +388,15 @@ export default function UserManagement() {
 
     setUpdatingUserId(userId);
     setListError("");
-    setSuccess("");
+    setTableSuccess("");
 
     try {
       const token = getAccessToken();
 
       if (!token) {
-        throw new Error("Please log in again as Super Admin.");
+        throw new Error(
+          "Please log in again as Super Admin."
+        );
       }
 
       const response = await fetch(
@@ -383,13 +424,15 @@ export default function UserManagement() {
               ? "Only a Super Admin can change user status."
               : getErrorMessage(
                   data,
-                  `Could not ${nextStatus ? "activate" : "deactivate"} this user.`
+                  "Could not update user status."
                 )
         );
       }
 
       setConfirmUser(null);
-      setSuccess(
+
+      // Show the table success message.
+      setTableSuccess(
         `${getFullName(user)} has been ${
           nextStatus ? "activated" : "deactivated"
         } successfully.`
@@ -398,6 +441,7 @@ export default function UserManagement() {
       await loadUsers();
     } catch (err) {
       setConfirmUser(null);
+
       setListError(
         err instanceof TypeError
           ? "Cannot connect to the backend. Check the API URL and whether the backend is running."
@@ -408,6 +452,109 @@ export default function UserManagement() {
     }
   }
 
+  // Register an Admin or independent Learner.
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    setError("");
+    setRegistrationSuccess("");
+
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const selectedRole = form.role;
+
+    if (!firstName || !lastName || !email || !form.password) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setError(
+        "Password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    const token = getAccessToken();
+
+    if (!token) {
+      setError("Please log in again as Super Admin.");
+      return;
+    }
+
+    const endpoint =
+      selectedRole === "Admin"
+        ? "/api/Auth/register/admin"
+        : "/api/Auth/register/learner";
+
+    // No OrganizationId is sent.
+    const payload = {
+      firstName,
+      lastName,
+      email,
+      password: form.password,
+      phone: phone || null,
+    };
+
+    setSaving(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await readResponse(response);
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "Your session has expired. Please log in again."
+            : response.status === 403
+              ? "You are not authorized to create this account. Sign in as Super Admin."
+              : getErrorMessage(
+                  data,
+                  `Could not register the ${selectedRole}.`
+                )
+        );
+      }
+
+      // Show the registration success message.
+      setRegistrationSuccess(
+        getErrorMessage(
+          data,
+          `${selectedRole} registered successfully.`
+        )
+      );
+
+      setForm(EMPTY_FORM);
+      setCurrentPage(1);
+
+      // Refresh the user table.
+      await loadUsers();
+    } catch (err) {
+      setError(
+        err instanceof TypeError
+          ? "Cannot connect to the backend. Check the API URL, backend and CORS settings."
+          : err.message ||
+              `Could not register the ${selectedRole}.`
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Search and filter users.
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -418,7 +565,6 @@ export default function UserManagement() {
         getEmail(user),
         getPhone(user),
         getRole(user),
-        getOrganization(user),
       ]
         .join(" ")
         .toLowerCase();
@@ -426,7 +572,8 @@ export default function UserManagement() {
       const matchesSearch = searchableText.includes(query);
 
       const matchesRole =
-        roleFilter === "All" || getRole(user) === roleFilter;
+        roleFilter === "All" ||
+        getRole(user) === roleFilter;
 
       const matchesStatus =
         statusFilter === "All" ||
@@ -449,12 +596,19 @@ export default function UserManagement() {
     Math.ceil(filteredUsers.length / PAGE_SIZE)
   );
 
-  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const safeCurrentPage = Math.min(
+    currentPage,
+    totalPages
+  );
 
   const paginatedUsers = useMemo(() => {
-    const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+    const startIndex =
+      (safeCurrentPage - 1) * PAGE_SIZE;
 
-    return filteredUsers.slice(startIndex, startIndex + PAGE_SIZE);
+    return filteredUsers.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
   }, [filteredUsers, safeCurrentPage]);
 
   const firstRecord =
@@ -467,151 +621,20 @@ export default function UserManagement() {
     filteredUsers.length
   );
 
-  function handleChange(event) {
-    const { name, value } = event.target;
+  const confirmIsActive = confirmUser
+    ? isActive(confirmUser)
+    : false;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-
-    setError("");
-    setSuccess("");
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setError("");
-    setSuccess("");
-
-    const firstName = form.firstName.trim();
-    const lastName = form.lastName.trim();
-    const email = form.email.trim();
-    const phone = form.phone.trim();
-    const organizationId = Number(form.organizationId);
-
-    if (!firstName || !lastName || !email || !form.password) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-
-    if (form.password.length < 8) {
-      setError("Password must contain at least 8 characters.");
-      return;
-    }
-
-    if (
-      !form.organizationId.trim() ||
-      !Number.isSafeInteger(organizationId) ||
-      organizationId <= 0
-    ) {
-      setError("Please select a valid organization.");
-      return;
-    }
-
-    const selectedOrganization = organizations.find((organization) => {
-      const id = valueOf(
-        organization,
-        "organizationId",
-        "OrganizationId"
-      );
-
-      return Number(id) === organizationId;
-    });
-
-    if (!selectedOrganization) {
-      setError(
-        "The selected organization is not in the active organization list. Refresh the organizations and try again."
-      );
-      return;
-    }
-
-    if (organizationsError) {
-      setError(
-        "Organizations could not be verified. Reload the organizations before registering a user."
-      );
-      return;
-    }
-
-    const token = getAccessToken();
-
-    if (!token) {
-      setError("Please log in again as Super Admin.");
-      return;
-    }
-
-    const endpoint =
-      form.role === "Admin"
-        ? "/api/Auth/register/admin"
-        : "/api/Auth/register/organization-learner";
-
-    const payload = {
-      firstName,
-      lastName,
-      email,
-      password: form.password,
-      phone: phone || null,
-      organizationId,
-    };
-
-    setSaving(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401
-            ? "Your session has expired. Please log in again."
-            : response.status === 403
-              ? "You are not authorized to create this account. Sign in as Super Admin."
-              : getErrorMessage(
-                  data,
-                  `Could not register the ${form.role}.`
-                )
-        );
-      }
-
-      // Registration success is displayed only above the users table.
-      setSuccess(
-        getErrorMessage(data, `${form.role} registered successfully.`)
-      );
-
-      setForm(EMPTY_FORM);
-      setCurrentPage(1);
-
-      await loadUsers();
-    } catch (err) {
-      setError(
-        err instanceof TypeError
-          ? "Cannot connect to the backend. Check the API URL, backend and CORS settings."
-          : err.message || `Could not register the ${form.role}.`
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function clearForm() {
-    setForm(EMPTY_FORM);
-    setError("");
-  }
-
-  const confirmIsActive = confirmUser ? isActive(confirmUser) : false;
-  const confirmAction = confirmIsActive ? "deactivate" : "activate";
+  const confirmAction = confirmIsActive
+    ? "deactivate"
+    : "activate";
 
   return (
-    <DashboardLayout role="Super Admin" title="User Management">
+    <DashboardLayout
+      role="Super Admin"
+      title="User Management"
+    >
+      {/* Page heading */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-slate-500">
@@ -651,7 +674,7 @@ export default function UserManagement() {
           {
             label: "Administrators",
             value: countRole("Admin"),
-            icon: Building2,
+            icon: UserRound,
             color: "bg-emerald-50 text-emerald-600",
           },
           {
@@ -695,24 +718,22 @@ export default function UserManagement() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Select a role and organization, then enter the account details.
+              Create an Admin or Learner account for SkillMesh.
             </p>
           </div>
         </div>
 
-        {error && (
-          <div
-            role="alert"
-            className="mt-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
-          >
-            <AlertCircle size={19} className="shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
+        <SuccessMessage
+          message={registrationSuccess}
+          onDismiss={() => setRegistrationSuccess("")}
+        />
 
-        {/* Success message intentionally removed from this section. */}
+        <ErrorMessage message={error} />
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-5"
+        >
           <div className="grid gap-5 md:grid-cols-2">
             <div>
               <label
@@ -732,89 +753,6 @@ export default function UserManagement() {
                 <option value="Learner">Learner</option>
                 <option value="Admin">Admin</option>
               </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="organizationId"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Organization *
-              </label>
-
-              <div className="relative">
-                <Building2
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <select
-                  id="organizationId"
-                  name="organizationId"
-                  required
-                  value={form.organizationId}
-                  onChange={handleChange}
-                  disabled={
-                    organizationsLoading ||
-                    organizations.length === 0 ||
-                    Boolean(organizationsError)
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50"
-                >
-                  <option value="">
-                    {organizationsLoading
-                      ? "Loading organizations..."
-                      : organizationsError
-                        ? "Could not load organizations"
-                        : organizations.length === 0
-                          ? "No active organizations available"
-                          : "Select an organization"}
-                  </option>
-
-                  {organizations.map((organization) => {
-                    const id = valueOf(
-                      organization,
-                      "organizationId",
-                      "OrganizationId"
-                    );
-
-                    const name = valueOf(
-                      organization,
-                      "organizationName",
-                      "OrganizationName"
-                    );
-
-                    return (
-                      <option key={id} value={String(id)}>
-                        {name || `Organization ${id}`}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {organizationsError && (
-                <div className="mt-2 text-sm text-red-600">
-                  <p>{organizationsError}</p>
-
-                  <button
-                    type="button"
-                    onClick={loadOrganizations}
-                    disabled={organizationsLoading}
-                    className="mt-1 font-semibold underline disabled:opacity-50"
-                  >
-                    Retry loading organizations
-                  </button>
-                </div>
-              )}
-
-              {!organizationsLoading &&
-                !organizationsError &&
-                organizations.length === 0 && (
-                  <p className="mt-2 text-sm text-amber-700">
-                    Create or activate an organization before registering a user.
-                  </p>
-                )}
             </div>
 
             <div>
@@ -925,7 +863,7 @@ export default function UserManagement() {
               </div>
             </div>
 
-            <div className="md:col-span-2">
+            <div>
               <label
                 htmlFor="password"
                 className="mb-2 block text-sm font-semibold text-slate-700"
@@ -961,8 +899,9 @@ export default function UserManagement() {
           </div>
 
           <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-            The selected role and organization are validated by the backend.
-            This form does not allow Super Admin registration.
+            Users learn independently. No organization selection is
+            required. Super Admin accounts cannot be registered from
+            this form.
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
@@ -977,17 +916,15 @@ export default function UserManagement() {
 
             <button
               type="submit"
-              disabled={
-                saving ||
-                organizationsLoading ||
-                organizations.length === 0 ||
-                Boolean(organizationsError)
-              }
+              disabled={saving}
               className="flex items-center justify-center gap-2 rounded-xl bg-[#5540F5] px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
             >
               {saving ? (
                 <>
-                  <LoaderCircle size={18} className="animate-spin" />
+                  <LoaderCircle
+                    size={18}
+                    className="animate-spin"
+                  />
                   Registering...
                 </>
               ) : (
@@ -1028,6 +965,16 @@ export default function UserManagement() {
           </button>
         </div>
 
+        <SuccessMessage
+          message={tableSuccess}
+          onDismiss={() => setTableSuccess("")}
+        />
+
+        <ErrorMessage
+          message={listError}
+          onRetry={loadUsers}
+        />
+
         {/* Search and filters */}
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="relative">
@@ -1040,7 +987,7 @@ export default function UserManagement() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, email, organization..."
+              placeholder="Search name, email, phone..."
               className="w-full rounded-xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
           </div>
@@ -1069,59 +1016,18 @@ export default function UserManagement() {
           </select>
         </div>
 
-        {listError && (
-          <div
-            role="alert"
-            className="mt-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
-          >
-            <AlertCircle size={19} className="mt-0.5 shrink-0" />
-
-            <div>
-              <p>{listError}</p>
-
-              <button
-                type="button"
-                onClick={loadUsers}
-                className="mt-2 font-semibold underline"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* The only location where success messages appear. */}
-        {success && (
-          <div
-            role="status"
-            className="mt-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
-          >
-            <CheckCircle2 size={19} className="mt-0.5 shrink-0" />
-
-            <div className="flex-1">
-              <p className="font-semibold">Success</p>
-              <p className="mt-0.5">{success}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSuccess("")}
-              aria-label="Dismiss success message"
-              className="rounded-lg p-1 text-emerald-700 transition hover:bg-emerald-100"
-            >
-              <X size={17} />
-            </button>
-          </div>
-        )}
-
         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
           <span>
-            <strong className="text-emerald-700">{activeUsers}</strong>{" "}
+            <strong className="text-emerald-700">
+              {activeUsers}
+            </strong>{" "}
             active
           </span>
 
           <span>
-            <strong className="text-rose-700">{inactiveUsers}</strong>{" "}
+            <strong className="text-rose-700">
+              {inactiveUsers}
+            </strong>{" "}
             inactive
           </span>
 
@@ -1140,7 +1046,10 @@ export default function UserManagement() {
 
         {loading && (
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
-            <LoaderCircle size={20} className="animate-spin" />
+            <LoaderCircle
+              size={20}
+              className="animate-spin"
+            />
             Loading users...
           </div>
         )}
@@ -1148,13 +1057,12 @@ export default function UserManagement() {
         {!loading && !listError && (
           <>
             <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full min-w-[850px] text-left text-sm">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Name</th>
                     <th className="px-4 py-3 font-semibold">Email</th>
                     <th className="px-4 py-3 font-semibold">Phone</th>
-                    <th className="px-4 py-3 font-semibold">Organization</th>
                     <th className="px-4 py-3 font-semibold">Role</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                     <th className="px-4 py-3 font-semibold">Created</th>
@@ -1185,10 +1093,6 @@ export default function UserManagement() {
                           {getPhone(user) || "—"}
                         </td>
 
-                        <td className="px-4 py-4 text-slate-600">
-                          {getOrganization(user)}
-                        </td>
-
                         <td className="px-4 py-4">
                           <span
                             className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
@@ -1203,7 +1107,6 @@ export default function UserManagement() {
                           </span>
                         </td>
 
-                        {/* One Status column with the toggle switch */}
                         <td className="px-4 py-4">
                           {isSuperAdmin ? (
                             <span
@@ -1223,44 +1126,32 @@ export default function UserManagement() {
                               {active ? "Active" : "Inactive"}
                             </span>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={active}
-                                aria-label={`Change status for ${getFullName(user)}`}
-                                onClick={() => handleToggleStatus(user)}
-                                disabled={updatingUserId !== null}
-                                title={
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={active}
+                              aria-label={`Change status for ${getFullName(user)}`}
+                              onClick={() => handleToggleStatus(user)}
+                              disabled={updatingUserId !== null}
+                              title={
+                                active
+                                  ? "Deactivate this user"
+                                  : "Activate this user"
+                              }
+                              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#5540F5] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                active
+                                  ? "bg-emerald-500"
+                                  : "bg-slate-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
                                   active
-                                    ? "Deactivate this user"
-                                    : "Activate this user"
-                                }
-                                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#5540F5] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                                  active
-                                    ? "bg-emerald-500"
-                                    : "bg-slate-300"
+                                    ? "translate-x-6"
+                                    : "translate-x-1"
                                 }`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                                    active
-                                      ? "translate-x-6"
-                                      : "translate-x-1"
-                                  }`}
-                                />
-                              </button>
-
-                              {/* <span
-                                className={`text-xs font-semibold ${
-                                  active
-                                    ? "text-emerald-700"
-                                    : "text-slate-500"
-                                }`}
-                              >
-                                {active ? "Active" : "Inactive"}
-                              </span> */}
-                            </div>
+                              />
+                            </button>
                           )}
                         </td>
 
@@ -1274,7 +1165,7 @@ export default function UserManagement() {
                   {filteredUsers.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={6}
                         className="px-4 py-10 text-center text-slate-500"
                       >
                         {users.length === 0
@@ -1305,7 +1196,9 @@ export default function UserManagement() {
                   <button
                     type="button"
                     onClick={() =>
-                      setCurrentPage((page) => Math.max(1, page - 1))
+                      setCurrentPage((page) =>
+                        Math.max(1, page - 1)
+                      )
                     }
                     disabled={safeCurrentPage <= 1}
                     className="flex items-center gap-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -1334,7 +1227,7 @@ export default function UserManagement() {
         )}
       </section>
 
-      {/* Custom Activate / Deactivate Confirmation Modal */}
+      {/* Activate / Deactivate confirmation modal */}
       {confirmUser && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
@@ -1380,7 +1273,9 @@ export default function UserManagement() {
                     id="status-modal-title"
                     className="text-lg font-bold text-[#17233F]"
                   >
-                    {confirmIsActive ? "Deactivate User" : "Activate User"}
+                    {confirmIsActive
+                      ? "Deactivate User"
+                      : "Activate User"}
                   </h2>
 
                   <p className="mt-0.5 text-sm text-slate-500">
@@ -1405,7 +1300,9 @@ export default function UserManagement() {
                 Are you sure you want to{" "}
                 <strong
                   className={
-                    confirmIsActive ? "text-rose-600" : "text-emerald-600"
+                    confirmIsActive
+                      ? "text-rose-600"
+                      : "text-emerald-600"
                   }
                 >
                   {confirmAction}
@@ -1440,7 +1337,8 @@ export default function UserManagement() {
                           : "bg-rose-50 text-rose-700"
                       }`}
                     >
-                      Currently {confirmIsActive ? "Active" : "Inactive"}
+                      Currently{" "}
+                      {confirmIsActive ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
@@ -1475,7 +1373,10 @@ export default function UserManagement() {
               >
                 {updatingUserId !== null ? (
                   <>
-                    <LoaderCircle size={17} className="animate-spin" />
+                    <LoaderCircle
+                      size={17}
+                      className="animate-spin"
+                    />
                     Updating...
                   </>
                 ) : (
